@@ -16,7 +16,7 @@ import java.io.OutputStream;
 public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
-    private final BackgroundRemover b = BackgroundRemover.loadModel("/Users/tonykwok/shadow/experiment/image-background-removal/mobile_net_model/frozen_inference_graph.pb");
+    private final BackgroundRemover b = BackgroundRemover.loadModel("/etc/model/model.pb");
 
     public static void main(String[] args) {
         new RemoveBackgroundWebServer().start();
