@@ -51,9 +51,9 @@ public class RemoveBackgroundWebServer {
             INDArray input = l.asMatrix(bimg).permute(0, 2, 3, 1);
             INDArray mat = b.predict(input);
             BufferedImage bufferedImage = drawSegment(input, mat);
-            response.raw().setContentType("image/jpeg");
+            response.raw().setContentType("image/png");
             try (OutputStream out = response.raw().getOutputStream()) {
-                ImageIO.write(bufferedImage, "jpg", out);
+                ImageIO.write(bufferedImage, "png", out);
             }
         }
         System.out.println("Took "+(System.currentTimeMillis() - start) + "ms to finish");
@@ -66,7 +66,7 @@ public class RemoveBackgroundWebServer {
 
         long height = shape[1];
         long width = shape[2];
-        BufferedImage image = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_INT_RGB);
+        BufferedImage image = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_INT_ARGB);
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 int mask = matImg.getInt(0, y, x);

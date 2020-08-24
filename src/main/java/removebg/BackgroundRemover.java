@@ -8,6 +8,7 @@ import java.io.File;
 
 public class BackgroundRemover {
 
+    private static final int RESULT_INDEX = 4;
     private final SameDiff sd;
 
     public static BackgroundRemover loadModel(String file) {
@@ -22,6 +23,6 @@ public class BackgroundRemover {
         sd.associateArrayWithVariable(indArray, sd.variables().get(0));
         NativeGraphExecutioner executioner = new NativeGraphExecutioner();
         INDArray[] results = executioner.executeGraph(sd);
-        return results[4];
+        return results[RESULT_INDEX];
     }
 }
