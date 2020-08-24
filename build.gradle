@@ -1,13 +1,14 @@
 plugins {
     id 'java'
+    id 'application'
 }
-
-group 'org.example'
-version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
 }
+
+mainClassName = "removebg.RemoveBackgroundWebServer"
+tasks.distZip.enabled = false
 
 dependencies {
 //    compile group: 'org.deeplearning4j', name: 'deeplearning4j-core', version: '1.0.0-beta7'
