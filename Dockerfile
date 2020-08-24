@@ -1,9 +1,15 @@
-FROM gradle:6.6.0-jdk11 AS build
+FROM gradle:6.6.0-jdk11 AS cache
+RUN mkdir -p /home/gradle/cache_home
+ENV GRADLE_USER_HOME /home/gradle/cache_home
 COPY build.gradle settings.gradle gradlew /home/gradle/src/
 WORKDIR /home/gradle/src
-RUN gradle build || return 0
+RUN gradle build
+
+FROM gradle:6.6.0-jdk11 AS build
+COPY --from=cache /home/gradle/cache_home /home/gradle/.gradle
 COPY --chown=gradle:gradle . /home/gradle/src
-RUN gradle build --no-daemon
+WORKDIR /home/gradle/src
+RUN gradle build
 
 FROM openjdk:11-jre-slim AS base
 RUN mkdir /app

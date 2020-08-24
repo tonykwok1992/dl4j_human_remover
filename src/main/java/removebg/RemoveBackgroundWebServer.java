@@ -15,7 +15,7 @@ import java.io.OutputStream;
 
 public class RemoveBackgroundWebServer {
 
-    private static final double INPUT_SIZE = 512.0d;
+    private static final double INPUT_SIZE = 1024.0d;
     private final BackgroundRemover b = BackgroundRemover.loadModel("/etc/model/model.pb");
 
     public static void main(String[] args) {
