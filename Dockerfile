@@ -1,6 +1,8 @@
 FROM gradle:6.6.0-jdk11 AS build
-COPY --chown=gradle:gradle . /home/gradle/src
+COPY build.gradle settings.gradle gradlew /home/gradle/src/
 WORKDIR /home/gradle/src
+RUN gradle build || return 0
+COPY --chown=gradle:gradle . /home/gradle/src
 RUN gradle build --no-daemon
 
 FROM openjdk:11-jre-slim AS base
