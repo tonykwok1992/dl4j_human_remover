@@ -11,14 +11,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class Main {
+public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
     private static final BackgroundRemover b = BackgroundRemover.loadModel("/Users/tonykwok/shadow/experiment/image-background-removal/mobile_net_model/frozen_inference_graph.pb");
 
     public static void main(String[] args) {
         Spark.port(5000);
-        Spark.post("/removebg", Main::inference);
+        Spark.post("/removebg", RemoveBackgroundWebServer::inference);
     }
 
     private static Object inference(Request request, Response response) throws IOException {
