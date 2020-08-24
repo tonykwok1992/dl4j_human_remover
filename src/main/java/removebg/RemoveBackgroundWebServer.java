@@ -23,6 +23,8 @@ public class RemoveBackgroundWebServer {
     private void start() {
         Spark.port(5000);
         Spark.post("/removebg", this::inference);
+        Spark.awaitInitialization();
+        System.out.println("Started");
     }
 
     private Object inference(Request request, Response response) throws IOException {
