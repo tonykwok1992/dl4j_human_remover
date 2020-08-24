@@ -1,3 +1,5 @@
+package removebg;
+
 import org.datavec.image.loader.Java2DNativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import spark.Request;

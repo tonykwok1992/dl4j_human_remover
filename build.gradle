@@ -14,6 +14,7 @@ dependencies {
 //    compile group: 'org.deeplearning4j', name: 'deeplearning4j-modelimport', version: '1.0.0-beta7'
 //    compile group: 'org.deeplearning4j', name: 'deeplearning4j-nn', version: '1.0.0-beta7'
 //    compile group: 'org.deeplearning4j', name: 'deeplearning4j-zoo', version: '1.0.0-beta7'
+//    compile "org.nd4j:nd4j-native-platform:1.0.0-beta7"
     compile "org.nd4j:nd4j-native-platform:1.0.0-beta7"
     compile group: 'org.datavec', name: 'datavec-data-image', version: '1.0.0-beta7'
     compile group: 'com.sparkjava', name: 'spark-core', version: '2.9.2'
