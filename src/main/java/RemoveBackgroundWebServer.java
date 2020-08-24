@@ -4,7 +4,7 @@ import spark.Request;
 import spark.Response;
 import spark.Spark;
 import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -14,14 +14,18 @@ import java.io.OutputStream;
 public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
-    private static final BackgroundRemover b = BackgroundRemover.loadModel("/Users/tonykwok/shadow/experiment/image-background-removal/mobile_net_model/frozen_inference_graph.pb");
+    private final BackgroundRemover b = BackgroundRemover.loadModel("/Users/tonykwok/shadow/experiment/image-background-removal/mobile_net_model/frozen_inference_graph.pb");
 
     public static void main(String[] args) {
-        Spark.port(5000);
-        Spark.post("/removebg", RemoveBackgroundWebServer::inference);
+        new RemoveBackgroundWebServer().start();
     }
 
-    private static Object inference(Request request, Response response) throws IOException {
+    private void start() {
+        Spark.port(5000);
+        Spark.post("/removebg", this::inference);
+    }
+
+    private Object inference(Request request, Response response) throws IOException {
         try {
             return doInference(request, response);
         } catch (Exception e) {
@@ -30,7 +34,7 @@ public class RemoveBackgroundWebServer {
         }
     }
 
-    private static Object doInference(Request request, Response response) throws IOException {
+    private Object doInference(Request request, Response response) throws IOException {
         byte[] body = request.bodyAsBytes();
         System.out.println("Received bytes " + body.length);
         try (InputStream bio = new ByteArrayInputStream(body)) {
