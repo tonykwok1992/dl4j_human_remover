@@ -39,6 +39,7 @@ public class RemoveBackgroundWebServer {
     }
 
     private Object doInference(Request request, Response response) throws IOException {
+        long start = System.currentTimeMillis();
         byte[] body = request.bodyAsBytes();
         System.out.println("Received bytes " + body.length);
         try (InputStream bio = new ByteArrayInputStream(body)) {
@@ -55,6 +56,7 @@ public class RemoveBackgroundWebServer {
                 ImageIO.write(bufferedImage, "jpg", out);
             }
         }
+        System.out.println("Took "+(System.currentTimeMillis() - start) + "ms to finish");
         return response;
     }
 
