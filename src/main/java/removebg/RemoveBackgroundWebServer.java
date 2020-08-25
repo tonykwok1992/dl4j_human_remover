@@ -5,8 +5,9 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import spark.Request;
 import spark.Response;
 import spark.Spark;
+
 import javax.imageio.ImageIO;
-import java.awt.Color;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -15,7 +16,7 @@ import java.io.OutputStream;
 
 public class RemoveBackgroundWebServer {
 
-    private static final double INPUT_SIZE = 1024.0d;
+    private static final double INPUT_SIZE = 512.0d;
     private final BackgroundRemover b = BackgroundRemover.loadModel("/etc/model/model.pb");
 
     public static void main(String[] args) {
@@ -47,6 +48,9 @@ public class RemoveBackgroundWebServer {
             int width = bimg.getWidth();
             int height = bimg.getHeight();
             double resizeRatio = INPUT_SIZE / Math.max(width, height);
+            while (resizeRatio > 1.0d) {
+                resizeRatio /= 2;
+            }
             Java2DNativeImageLoader l = new Java2DNativeImageLoader((int) (height * resizeRatio), (int) (width * resizeRatio), 3);
             INDArray input = l.asMatrix(bimg).permute(0, 2, 3, 1);
             INDArray mat = b.predict(input);
