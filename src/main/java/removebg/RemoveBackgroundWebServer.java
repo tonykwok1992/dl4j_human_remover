@@ -45,32 +45,47 @@ public class RemoveBackgroundWebServer {
     }
 
     private Object doInference(Request request, Response response) throws IOException {
-        long start = System.currentTimeMillis();
         byte[] body = request.bodyAsBytes();
-        System.out.println("Received bytes " + body.length);
+        System.out.println("Received bytes with length " + body.length);
+        long start = System.currentTimeMillis();
         try (InputStream bio = new ByteArrayInputStream(body)) {
-            BufferedImage bimg = ImageIO.read(bio);
-            int width = bimg.getWidth();
-            int height = bimg.getHeight();
-            double resizeRatio = INPUT_SIZE / Math.max(width, height);
-            while (resizeRatio > 1.0d) {
-                resizeRatio /= 2;
-            }
-            Java2DNativeImageLoader l = new Java2DNativeImageLoader((int) (height * resizeRatio), (int) (width * resizeRatio), 3);
-            INDArray input = l.asMatrix(bimg).permute(0, 2, 3, 1);
-            INDArray mat = b.predict(input);
+            INDArray input = readStreamToBufferedImage(bio);
+            INDArray mat = predict(input);
             BufferedImage bufferedImage = drawSegment(input, mat);
             response.raw().setContentType("image/png");
             try (OutputStream out = response.raw().getOutputStream()) {
                 ImageIO.write(bufferedImage, "png", out);
             }
         }
-        System.out.println("Took "+(System.currentTimeMillis() - start) + "ms to finish");
+        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
         return response;
+    }
+
+    private INDArray predict(INDArray input) {
+        long start = System.currentTimeMillis();
+        INDArray result = b.predict(input);
+        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish predicting segment from model");
+        return result;
+    }
+
+    private INDArray readStreamToBufferedImage(InputStream bio) throws IOException {
+        long start = System.currentTimeMillis();
+        BufferedImage bimg = ImageIO.read(bio);
+        int width = bimg.getWidth();
+        int height = bimg.getHeight();
+        double resizeRatio = INPUT_SIZE / Math.max(width, height);
+        while (resizeRatio > 1.0d) {
+            resizeRatio /= 2;
+        }
+        Java2DNativeImageLoader l = new Java2DNativeImageLoader((int) (height * resizeRatio), (int) (width * resizeRatio), 3);
+        INDArray indArray = l.asMatrix(bimg).permute(0, 2, 3, 1);
+        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish predicting converting to image");
+        return indArray;
     }
 
 
     private static BufferedImage drawSegment(INDArray baseImg, INDArray matImg) {
+        long start = System.currentTimeMillis();
 
         long[] shape = baseImg.shape();
 
@@ -96,7 +111,7 @@ public class RemoveBackgroundWebServer {
                 int mask = matImg.getInt(0, y, x);
                 if (mask != 0) {
                     maskImage.setRGB(x, y, new Color(255, 255, 255).getRGB());
-                }else{
+                } else {
                     maskImage.setRGB(x, y, new Color(0, 0, 0).getRGB());
                 }
 
@@ -106,22 +121,9 @@ public class RemoveBackgroundWebServer {
         Mat maskMat = Java2DFrameUtils.toMat(maskImage);
         Mat imageMat = Java2DFrameUtils.toMat(image);
         inpaint(imageMat, maskMat, imageMat, 1.0d, INPAINT_TELEA);
-        return Java2DFrameUtils.toBufferedImage(imageMat);
+        BufferedImage resultImage = Java2DFrameUtils.toBufferedImage(imageMat);
+        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish drawing output image");
+        return resultImage;
     }
-
-//    public static void main(String[] args) {
-//
-//        for(int i =0;i<20;++i){
-//            try {
-//                Mat mat = Java2DFrameUtils.toMat(new BufferedImage((int) 2, (int) 2, i));
-//                System.out.print("makecv=" + i);
-//                System.out.print("; channels=" + mat.channels());
-//                System.out.println("; depth=" + mat.depth());
-//            }catch (Exception e){
-//                continue;
-//            }
-//        }
-//
-//    }
 
 }
