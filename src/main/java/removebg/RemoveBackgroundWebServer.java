@@ -2,7 +2,8 @@ package removebg;
 
 import org.bytedeco.javacv.Java2DFrameUtils;
 import org.bytedeco.opencv.opencv_core.Mat;
-import org.datavec.image.loader.Java2DNativeImageLoader;
+import org.bytedeco.opencv.opencv_core.Size;
+import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import spark.Request;
 import spark.Response;
@@ -11,11 +12,12 @@ import spark.Spark;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
+import static org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_UNCHANGED;
+import static org.bytedeco.opencv.global.opencv_imgcodecs.imdecode;
+import static org.bytedeco.opencv.global.opencv_imgproc.resize;
 import static org.bytedeco.opencv.global.opencv_photo.INPAINT_TELEA;
 import static org.bytedeco.opencv.global.opencv_photo.inpaint;
 
@@ -48,18 +50,29 @@ public class RemoveBackgroundWebServer {
         byte[] body = request.bodyAsBytes();
         System.out.println("Received bytes with length " + body.length);
         long start = System.currentTimeMillis();
-        try (InputStream bio = new ByteArrayInputStream(body)) {
-            BufferedImage bimg = ImageIO.read(bio);
-            INDArray input = readStreamToBufferedImage(bimg);
-            INDArray mat = predict(input);
-            BufferedImage bufferedImage = drawSegment(bimg, mat);
-            response.raw().setContentType("image/png");
-            try (OutputStream out = response.raw().getOutputStream()) {
-                ImageIO.write(bufferedImage, "png", out);
-            }
+        Mat resizedImageMat = convertToMat(body);
+        INDArray input = matToIndArray(resizedImageMat);
+        INDArray predicted = predict(input);
+        BufferedImage bufferedImage = drawSegment(resizedImageMat, predicted);
+        response.raw().setContentType("image/png");
+        try (OutputStream out = response.raw().getOutputStream()) {
+            ImageIO.write(bufferedImage, "png", out);
         }
+
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
         return response;
+    }
+
+    private Mat convertToMat(byte[] body) {
+        Mat baseImgMat = imdecode(new Mat(body), IMREAD_UNCHANGED);
+        double resizeRatio = INPUT_SIZE / Math.max(baseImgMat.cols(), baseImgMat.rows());
+        while (resizeRatio > 1.0d) {
+            resizeRatio /= 2;
+        }
+        Size size = new Size((int) (baseImgMat.cols() * resizeRatio), (int) (baseImgMat.rows() * resizeRatio));
+        Mat mat = new Mat(size);
+        resize(baseImgMat, mat, size);
+        return mat;
     }
 
     private INDArray predict(INDArray input) {
@@ -69,26 +82,20 @@ public class RemoveBackgroundWebServer {
         return result;
     }
 
-    private INDArray readStreamToBufferedImage(BufferedImage bimg) throws IOException {
+    private static INDArray matToIndArray(Mat mat) throws IOException {
         long start = System.currentTimeMillis();
-        int width = bimg.getWidth();
-        int height = bimg.getHeight();
-        double resizeRatio = INPUT_SIZE / Math.max(width, height);
-        while (resizeRatio > 1.0d) {
-            resizeRatio /= 2;
-        }
-        Java2DNativeImageLoader l = new Java2DNativeImageLoader((int) (height * resizeRatio), (int) (width * resizeRatio), 3);
-        INDArray indArray = l.asMatrix(bimg).permute(0, 2, 3, 1);
+        NativeImageLoader nativeImageLoader = new NativeImageLoader();
+        INDArray indArray = nativeImageLoader.asMatrix(mat).permute(0, 2, 3, 1);
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish converting image to nd array");
         return indArray;
     }
 
 
-    private static BufferedImage drawSegment(BufferedImage baseImg, INDArray matImg) {
+    private static BufferedImage drawSegment(Mat baseImg, INDArray matImg) {
         long start = System.currentTimeMillis();
 
-        int height = baseImg.getHeight();
-        int width = baseImg.getWidth();
+        int height = baseImg.rows();
+        int width = baseImg.cols();
 
         BufferedImage maskImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
         for (int x = 0; x < width; x++) {
@@ -104,9 +111,8 @@ public class RemoveBackgroundWebServer {
         }
 
         Mat maskMat = Java2DFrameUtils.toMat(maskImage);
-        Mat imageMat = Java2DFrameUtils.toMat(baseImg);
-        inpaint(imageMat, maskMat, imageMat, 1.0d, INPAINT_TELEA);
-        BufferedImage resultImage = Java2DFrameUtils.toBufferedImage(imageMat);
+        inpaint(baseImg, maskMat, baseImg, 1.0d, INPAINT_TELEA);
+        BufferedImage resultImage = Java2DFrameUtils.toBufferedImage(baseImg);
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish drawing output image");
         return resultImage;
     }
