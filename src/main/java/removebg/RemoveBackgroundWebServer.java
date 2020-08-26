@@ -22,7 +22,7 @@ import static org.bytedeco.opencv.global.opencv_photo.inpaint;
 public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
-    private final BackgroundRemover b = BackgroundRemover.loadModel("/etc/model/model.pb");
+    private final BackgroundRemover b = BackgroundRemover.loadModel(System.getenv("MODEL_PATH"));
 
     public static void main(String[] args) {
         new RemoveBackgroundWebServer().start();
