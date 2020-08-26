@@ -9,14 +9,12 @@ import spark.Request;
 import spark.Response;
 import spark.Spark;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
-import static org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_UNCHANGED;
-import static org.bytedeco.opencv.global.opencv_imgcodecs.imdecode;
+import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.resize;
 import static org.bytedeco.opencv.global.opencv_photo.INPAINT_TELEA;
 import static org.bytedeco.opencv.global.opencv_photo.inpaint;
@@ -53,14 +51,12 @@ public class RemoveBackgroundWebServer {
         Mat resizedImageMat = convertToMat(body);
         INDArray input = matToIndArray(resizedImageMat);
         INDArray predicted = predict(input);
-        BufferedImage bufferedImage = drawSegment(resizedImageMat, predicted);
-        response.raw().setContentType("image/png");
-        try (OutputStream out = response.raw().getOutputStream()) {
-            ImageIO.write(bufferedImage, "png", out);
-        }
-
+        Mat bufferedImage = drawSegment(resizedImageMat, predicted);
+        ByteBuffer buffer = ByteBuffer.allocate(1000000); //TODO: use pool / thread local
+        imencode(".png", bufferedImage, buffer);
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
-        return response;
+        response.raw().setContentType("image/png");
+        return buffer;
     }
 
     private Mat convertToMat(byte[] body) {
@@ -91,7 +87,7 @@ public class RemoveBackgroundWebServer {
     }
 
 
-    private static BufferedImage drawSegment(Mat baseImg, INDArray matImg) {
+    private static Mat drawSegment(Mat baseImg, INDArray matImg) {
         long start = System.currentTimeMillis();
 
         int height = baseImg.rows();
@@ -112,9 +108,8 @@ public class RemoveBackgroundWebServer {
 
         Mat maskMat = Java2DFrameUtils.toMat(maskImage);
         inpaint(baseImg, maskMat, baseImg, 1.0d, INPAINT_TELEA);
-        BufferedImage resultImage = Java2DFrameUtils.toBufferedImage(baseImg);
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish drawing output image");
-        return resultImage;
+        return baseImg;
     }
 
 }
