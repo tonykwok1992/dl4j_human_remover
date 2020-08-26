@@ -1,7 +1,11 @@
 package removebg;
 
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.Java2DNativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.opencv.photo.Photo;
 import spark.Request;
 import spark.Response;
 import spark.Spark;
@@ -10,15 +14,21 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import static org.bytedeco.opencv.global.opencv_core.CV_8UC1;
+import static org.bytedeco.opencv.global.opencv_core.CV_8UC3;
+import static org.bytedeco.opencv.global.opencv_photo.INPAINT_TELEA;
+import static org.bytedeco.opencv.global.opencv_photo.inpaint;
 
 public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
     private final BackgroundRemover b = BackgroundRemover.loadModel("/etc/model/model.pb");
-
+    
     public static void main(String[] args) {
         new RemoveBackgroundWebServer().start();
     }
@@ -66,28 +76,57 @@ public class RemoveBackgroundWebServer {
 
 
     private static BufferedImage drawSegment(INDArray baseImg, INDArray matImg) {
+
         long[] shape = baseImg.shape();
 
         long height = shape[1];
         long width = shape[2];
-        BufferedImage image = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage image = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_3BYTE_BGR);
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                int red = baseImg.getInt(0, y, x, 2);
+                int green = baseImg.getInt(0, y, x, 1);
+                int blue = baseImg.getInt(0, y, x, 0);
+
+                red = Math.max(Math.min(red, 255), 0);
+                green = Math.max(Math.min(green, 255), 0);
+                blue = Math.max(Math.min(blue, 255), 0);
+                image.setRGB(x, y, new Color(red, green, blue).getRGB());
+            }
+        }
+
+        BufferedImage maskImage = new BufferedImage((int) width, (int) height, BufferedImage.TYPE_BYTE_GRAY);
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 int mask = matImg.getInt(0, y, x);
                 if (mask != 0) {
-                    int red = baseImg.getInt(0, y, x, 2);
-                    int green = baseImg.getInt(0, y, x, 1);
-                    int blue = baseImg.getInt(0, y, x, 0);
-
-                    red = Math.max(Math.min(red, 255), 0);
-                    green = Math.max(Math.min(green, 255), 0);
-                    blue = Math.max(Math.min(blue, 255), 0);
-                    image.setRGB(x, y, new Color(red, green, blue).getRGB());
+                    maskImage.setRGB(x, y, new Color(255, 255, 255).getRGB());
+                }else{
+                    maskImage.setRGB(x, y, new Color(0, 0, 0).getRGB());
                 }
 
             }
         }
-        return image;
+
+        Mat maskMat = Java2DFrameUtils.toMat(maskImage);
+        Mat imageMat = Java2DFrameUtils.toMat(image);
+        inpaint(imageMat, maskMat, imageMat, 1.0d, INPAINT_TELEA);
+        return Java2DFrameUtils.toBufferedImage(imageMat);
     }
+
+//    public static void main(String[] args) {
+//
+//        for(int i =0;i<20;++i){
+//            try {
+//                Mat mat = Java2DFrameUtils.toMat(new BufferedImage((int) 2, (int) 2, i));
+//                System.out.print("makecv=" + i);
+//                System.out.print("; channels=" + mat.channels());
+//                System.out.println("; depth=" + mat.depth());
+//            }catch (Exception e){
+//                continue;
+//            }
+//        }
+//
+//    }
 
 }
