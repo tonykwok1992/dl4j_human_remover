@@ -2,10 +2,8 @@ package removebg;
 
 import org.bytedeco.javacv.Java2DFrameUtils;
 import org.bytedeco.opencv.opencv_core.Mat;
-import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.Java2DNativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.opencv.photo.Photo;
 import spark.Request;
 import spark.Response;
 import spark.Spark;
@@ -14,13 +12,10 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import static org.bytedeco.opencv.global.opencv_core.CV_8UC1;
-import static org.bytedeco.opencv.global.opencv_core.CV_8UC3;
 import static org.bytedeco.opencv.global.opencv_photo.INPAINT_TELEA;
 import static org.bytedeco.opencv.global.opencv_photo.inpaint;
 
@@ -28,7 +23,7 @@ public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
     private final BackgroundRemover b = BackgroundRemover.loadModel("/etc/model/model.pb");
-    
+
     public static void main(String[] args) {
         new RemoveBackgroundWebServer().start();
     }
