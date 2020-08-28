@@ -4,6 +4,7 @@ import org.bytedeco.javacv.Java2DFrameUtils;
 import org.bytedeco.opencv.opencv_core.Mat;
 import org.datavec.image.loader.Java2DNativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import removebg.inpaint.SeamCarver;
 import spark.Request;
 import spark.Response;
 import spark.Spark;
@@ -54,7 +55,7 @@ public class RemoveBackgroundWebServer {
             BufferedImage bufferedImage = drawSegment(input, mat);
             response.raw().setContentType("image/png");
             try (OutputStream out = response.raw().getOutputStream()) {
-                ImageIO.write(bufferedImage, "png", out);
+                ImageIO.write(new SeamCarver(bufferedImage).carveImage(200,200), "png", out);
             }
         }
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
