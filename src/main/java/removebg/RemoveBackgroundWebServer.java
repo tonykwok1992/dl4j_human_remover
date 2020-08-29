@@ -1,10 +1,16 @@
 package removebg;
 
+import org.bytedeco.javacpp.indexer.Indexer;
 import org.bytedeco.javacv.Java2DFrameUtils;
 import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Range;
+import org.bytedeco.opencv.opencv_core.Rect;
 import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.INDArrayIndex;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import spark.Request;
 import spark.Response;
 import spark.Spark;
@@ -14,8 +20,9 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import static org.bytedeco.opencv.global.opencv_core.*;
 import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
-import static org.bytedeco.opencv.global.opencv_imgproc.resize;
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
 import static org.bytedeco.opencv.global.opencv_photo.INPAINT_TELEA;
 import static org.bytedeco.opencv.global.opencv_photo.inpaint;
 
@@ -51,6 +58,7 @@ public class RemoveBackgroundWebServer {
         Mat resizedImageMat = convertToMat(body);
         INDArray input = matToIndArray(resizedImageMat);
         INDArray predicted = predict(input);
+
         Mat bufferedImage = drawSegment(resizedImageMat, predicted);
         ByteBuffer buffer = ByteBuffer.allocate(1000000); //TODO: use pool / thread local
         imencode(".png", bufferedImage, buffer);
@@ -58,6 +66,7 @@ public class RemoveBackgroundWebServer {
         response.raw().setContentType("image/png");
         return buffer;
     }
+
 
     private Mat convertToMat(byte[] body) {
         Mat baseImgMat = imdecode(new Mat(body), IMREAD_UNCHANGED);
@@ -87,29 +96,126 @@ public class RemoveBackgroundWebServer {
     }
 
 
-    private static Mat drawSegment(Mat baseImg, INDArray matImg) {
+    private static Mat drawSegment(Mat baseImg, INDArray objectArea) {
         long start = System.currentTimeMillis();
+        Mat energy = computeEnergyMatrixModified(baseImg, objectArea);
+        for (int i = 0; i < 200; i++) {
+            INDArray seam = findVerticalSeam(baseImg, energy);
+            baseImg = removeVerticalSeam(baseImg, seam);
+            objectArea = removeVerticalSeamFromMask(objectArea, seam);
+            energy = computeEnergyMatrixModified(baseImg, objectArea);
+        }
 
-        int height = baseImg.rows();
-        int width = baseImg.cols();
+        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish drawing output image");
+        return baseImg;
+    }
 
-        BufferedImage maskImage = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                int mask = matImg.getInt(0, y, x);
+    private static Mat removeVerticalSeam(Mat baseImg, INDArray seam) {
+        int rows = baseImg.rows();
+        int cols = baseImg.cols();
+
+        Indexer indexer = baseImg.createIndexer();
+        for (int row = 0; row < rows; row++) {
+            for (int col = seam.getInt(row); col < cols - 1; col++) {
+                indexer.putDouble(new long[]{row, col}, indexer.getDouble(row, col + 1));
+            }
+        }
+        return baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
+    }
+
+    private static INDArray removeVerticalSeamFromMask(INDArray baseImg, INDArray seam) {
+        int rows = baseImg.get(NDArrayIndex.point(0)).rows();
+        int cols = baseImg.get(NDArrayIndex.point(0)).columns();
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = seam.getInt(row); col < cols - 1; col++) {
+                baseImg.putScalar(new long[]{0, row, col}, baseImg.getDouble(new long[]{0, row, col+1}));
+            }
+        }
+
+        return baseImg.get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(0, cols-1));
+    }
+
+    public static Mat computeEnergyMatrix(Mat img) {
+        int rows = img.rows();
+        int cols = img.cols();
+        Mat gray = new Mat(rows, cols, img.depth());
+        Mat sobelX = new Mat(rows, cols, img.depth());
+        Mat sobelY = new Mat(rows, cols, img.depth());
+
+        Mat absSobelX = new Mat(rows, cols, img.depth());
+        Mat absSobelY = new Mat(rows, cols, img.depth());
+
+        Mat energyMatrix = new Mat(rows, cols, img.depth());
+
+        cvtColor(img, gray, CV_BGR2GRAY);
+        Sobel(gray, sobelX, CV_64F, 1, 0);
+        Sobel(gray, sobelY, CV_64F, 0, 1);
+        convertScaleAbs(sobelX, absSobelX);
+        convertScaleAbs(sobelY, absSobelY);
+        addWeighted(absSobelX, 0.5, absSobelY, 0.5, 0, energyMatrix);
+        return energyMatrix;
+    }
+
+    public static Mat computeEnergyMatrixModified(Mat img, INDArray objectArea) {
+        Mat energyMatrix = computeEnergyMatrix(img);
+        Indexer indexer = energyMatrix.createIndexer();
+
+        for (int i = 0; i < img.rows(); i++) {
+            for (int j = 0; j < img.cols(); j++) {
+                int mask = objectArea.getInt(0, i, j);
                 if (mask != 0) {
-                    maskImage.setRGB(x, y, new Color(255, 255, 255).getRGB());
-                } else {
-                    maskImage.setRGB(x, y, new Color(0, 0, 0).getRGB());
+                    for (int k = 0; k < img.channels(); k++) {
+                        indexer.putDouble(new long[]{i, j, k}, 0.0d);
+                    }
                 }
+            }
+        }
+        return energyMatrix;
+    }
+
+    public static INDArray findVerticalSeam(Mat img, Mat energy) {
+        int rows = img.rows();
+        int cols = img.cols();
+        INDArray distTo = Nd4j.zeros(rows, cols).assign(Double.MAX_VALUE);
+        distTo.putRow(0, Nd4j.zeros(cols));
+        INDArray edgeTo = Nd4j.zeros(rows, cols);
+
+        Indexer indexer = energy.createIndexer();
+
+        for (int row = 0; row < rows - 1; row++) {
+            for (int col = 0; col < cols; col++) {
+                if (col != 0) {
+                    if (distTo.getDouble(row + 1, col - 1) > distTo.getDouble(row, col) + indexer.getDouble(row + 1, col - 1)) {
+                        distTo.put(row + 1, col - 1, distTo.getDouble(row, col) + indexer.getDouble(row + 1, col - 1));
+                        edgeTo.put(row + 1, col - 1, 1.0);
+                    }
+                }
+
+                if (distTo.getDouble(row + 1, col) > distTo.getDouble(row, col) + indexer.getDouble(row + 1, col)) {
+                    distTo.put(row + 1, col, distTo.getDouble(row, col) + indexer.getDouble(row + 1, col));
+                    edgeTo.put(row + 1, col, 0.0);
+                }
+
+                if (col != cols - 1) {
+                    if (distTo.getDouble(row + 1, col + 1) > distTo.getDouble(row, col) + indexer.getDouble(row + 1, col + 1)) {
+                        distTo.put(row + 1, col + 1, distTo.getDouble(row, col) + indexer.getDouble(row + 1, col + 1));
+                        edgeTo.put(row + 1, col + 1, -1.0d);
+                    }
+                }
+
 
             }
         }
 
-        Mat maskMat = Java2DFrameUtils.toMat(maskImage);
-        inpaint(baseImg, maskMat, baseImg, 1.0d, INPAINT_TELEA);
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish drawing output image");
-        return baseImg;
+        INDArray seam = Nd4j.zeros(rows);
+        seam.put(rows - 1, Nd4j.argMin(distTo.getRow(rows - 1), 0));
+
+        for (int i = rows - 1; i > 0; i--) {
+            seam.putScalar(i - 1, seam.getDouble(i) + edgeTo.getDouble(i, seam.getInt(i)));
+        }
+        return seam;
     }
+
 
 }
