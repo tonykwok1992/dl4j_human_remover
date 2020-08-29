@@ -1,30 +1,24 @@
 package removebg;
 
 import org.bytedeco.javacpp.indexer.Indexer;
-import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.javacpp.indexer.UByteIndexer;
 import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Range;
-import org.bytedeco.opencv.opencv_core.Rect;
 import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import spark.Request;
 import spark.Response;
 import spark.Spark;
 
-import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.bytedeco.opencv.global.opencv_core.*;
 import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.*;
-import static org.bytedeco.opencv.global.opencv_photo.INPAINT_TELEA;
-import static org.bytedeco.opencv.global.opencv_photo.inpaint;
 
 public class RemoveBackgroundWebServer {
 
@@ -99,7 +93,7 @@ public class RemoveBackgroundWebServer {
     private static Mat drawSegment(Mat baseImg, INDArray objectArea) {
         long start = System.currentTimeMillis();
         Mat energy = computeEnergyMatrixModified(baseImg, objectArea);
-        for (int i = 0; i < 200; i++) {
+        for (int i = 0; i < 350; i++) {
             INDArray seam = findVerticalSeam(baseImg, energy);
             baseImg = removeVerticalSeam(baseImg, seam);
             objectArea = removeVerticalSeamFromMask(objectArea, seam);
@@ -113,11 +107,14 @@ public class RemoveBackgroundWebServer {
     private static Mat removeVerticalSeam(Mat baseImg, INDArray seam) {
         int rows = baseImg.rows();
         int cols = baseImg.cols();
+        int channels = baseImg.channels();
 
-        Indexer indexer = baseImg.createIndexer();
+        UByteIndexer indexer = baseImg.createIndexer();
         for (int row = 0; row < rows; row++) {
             for (int col = seam.getInt(row); col < cols - 1; col++) {
-                indexer.putDouble(new long[]{row, col}, indexer.getDouble(row, col + 1));
+                for (int channel = 0; channel < channels; channel++) {
+                    indexer.put(new long[]{row, col, channel}, indexer.get(new long[]{row, col + 1, channel}));
+                }
             }
         }
         return baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
@@ -129,24 +126,22 @@ public class RemoveBackgroundWebServer {
 
         for (int row = 0; row < rows; row++) {
             for (int col = seam.getInt(row); col < cols - 1; col++) {
-                baseImg.putScalar(new long[]{0, row, col}, baseImg.getDouble(new long[]{0, row, col+1}));
+                baseImg.putScalar(new long[]{0, row, col}, baseImg.getDouble(new long[]{0, row, col + 1}));
             }
         }
 
-        return baseImg.get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(0, cols-1));
+        return baseImg.get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(0, cols - 1));
     }
 
     public static Mat computeEnergyMatrix(Mat img) {
-        int rows = img.rows();
-        int cols = img.cols();
-        Mat gray = new Mat(rows, cols, img.depth());
-        Mat sobelX = new Mat(rows, cols, img.depth());
-        Mat sobelY = new Mat(rows, cols, img.depth());
+        Mat gray = new Mat();
+        Mat sobelX = new Mat();
+        Mat sobelY = new Mat();
 
-        Mat absSobelX = new Mat(rows, cols, img.depth());
-        Mat absSobelY = new Mat(rows, cols, img.depth());
+        Mat absSobelX = new Mat();
+        Mat absSobelY = new Mat();
 
-        Mat energyMatrix = new Mat(rows, cols, img.depth());
+        Mat energyMatrix = new Mat();
 
         cvtColor(img, gray, CV_BGR2GRAY);
         Sobel(gray, sobelX, CV_64F, 1, 0);
@@ -159,15 +154,13 @@ public class RemoveBackgroundWebServer {
 
     public static Mat computeEnergyMatrixModified(Mat img, INDArray objectArea) {
         Mat energyMatrix = computeEnergyMatrix(img);
-        Indexer indexer = energyMatrix.createIndexer();
+        UByteIndexer indexer = energyMatrix.createIndexer();
 
         for (int i = 0; i < img.rows(); i++) {
             for (int j = 0; j < img.cols(); j++) {
                 int mask = objectArea.getInt(0, i, j);
                 if (mask != 0) {
-                    for (int k = 0; k < img.channels(); k++) {
-                        indexer.putDouble(new long[]{i, j, k}, 0.0d);
-                    }
+                    indexer.putDouble(new long[]{i, j}, 0.0d);
                 }
             }
         }
