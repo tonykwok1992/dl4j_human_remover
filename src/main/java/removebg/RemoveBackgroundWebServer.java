@@ -7,6 +7,9 @@ import org.bytedeco.opencv.opencv_core.Range;
 import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.ops.impl.reduce.bool.Any;
+import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
+import org.nd4j.linalg.api.ops.impl.reduce.longer.CountZero;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import spark.Request;
@@ -92,12 +95,12 @@ public class RemoveBackgroundWebServer {
 
     private static Mat drawSegment(Mat baseImg, INDArray objectArea) {
         long start = System.currentTimeMillis();
-        Mat energy = computeEnergyMatrixModified(baseImg, objectArea);
-        for (int i = 0; i < 350; i++) {
+        for (int i = 0; i < 300 || objectArea.none(); i++) {
+            System.out.println(Nd4j.getExecutioner().exec(new CountNonZero(objectArea)));
+            Mat energy = computeEnergyMatrixModified(baseImg, objectArea);
             INDArray seam = findVerticalSeam(baseImg, energy);
             baseImg = removeVerticalSeam(baseImg, seam);
             objectArea = removeVerticalSeamFromMask(objectArea, seam);
-            energy = computeEnergyMatrixModified(baseImg, objectArea);
         }
 
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish drawing output image");
@@ -113,7 +116,7 @@ public class RemoveBackgroundWebServer {
         for (int row = 0; row < rows; row++) {
             for (int col = seam.getInt(row); col < cols - 1; col++) {
                 for (int channel = 0; channel < channels; channel++) {
-                    indexer.put(new long[]{row, col, channel}, indexer.get(new long[]{row, col + 1, channel}));
+                    indexer.put(row, col, channel, indexer.get(row, col + 1, channel));
                 }
             }
         }
@@ -160,7 +163,7 @@ public class RemoveBackgroundWebServer {
             for (int j = 0; j < img.cols(); j++) {
                 int mask = objectArea.getInt(0, i, j);
                 if (mask != 0) {
-                    indexer.putDouble(new long[]{i, j}, 0.0d);
+                    indexer.put(i, j, 0);
                 }
             }
         }
