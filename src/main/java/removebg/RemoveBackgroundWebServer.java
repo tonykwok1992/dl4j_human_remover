@@ -96,19 +96,20 @@ public class RemoveBackgroundWebServer {
     private static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
         long start = System.currentTimeMillis();
         final INDArrayIndex allIndex = NDArrayIndex.all();
-
+        int oriRow = baseImg.cols();
         int lastNonZeroCount = Integer.MAX_VALUE;
         int noImproveCount = 0;
+        Mat energy = null;
         for (int i = 0; i < MAX_WIDTH_TO_REMOVE && noImproveCount <= NO_IMPROVEMENT_COUNT_BREAK; i++) {
             int currentNonZeroCount = Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0);
             System.out.println("lastNonZeroCount: " + lastNonZeroCount);
             System.out.println("noImproveCount: " + noImproveCount);
             if (lastNonZeroCount == currentNonZeroCount) {
                 noImproveCount++;
-            }else{
+            } else {
                 noImproveCount = 0;
             }
-            Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
+            energy = computeEnergyMatrixWithMask(baseImg, maskArea);
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
             baseImg = baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
@@ -117,8 +118,59 @@ public class RemoveBackgroundWebServer {
             lastNonZeroCount = currentNonZeroCount;
         }
 
+        Mat imgOut = baseImg.clone();
+
+        int toAddCount = oriRow - baseImg.cols();
+        for (int i = 0; i < toAddCount; i++) {
+            INDArray seam = findVerticalSeam(baseImg, energy);
+            removeVerticalSeam(baseImg, maskArea, seam);
+            baseImg = baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
+
+            imgOut = addVerticalSeam(imgOut, seam, i);
+            energy = computeEnergyMatrix(baseImg);
+
+        }
+
+
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
-        return baseImg;
+        return imgOut;
+    }
+
+    private static Mat addVerticalSeam(Mat baseImg, INDArray seam, int numIter) {
+        int rows = baseImg.rows();
+        int cols = baseImg.cols();
+        int channels = baseImg.channels();
+
+        Mat imgExtend = new Mat(baseImg.rows(), baseImg.cols()+1, baseImg.type());
+        UByteIndexer baseImgIndexer = baseImg.createIndexer();
+        UByteIndexer indexer = imgExtend.createIndexer();
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                for (int channel = 0; channel < channels; channel++) {
+                    indexer.put(new long[]{row, col, channel}, baseImgIndexer.get(row, col, channel) );
+                }
+            }
+        }
+
+        seam = seam.add(numIter);
+
+        for (int row = 0; row < rows; row++) {
+            int seamInt = seam.getInt(row);
+            for (int col = cols; col > seamInt; col--) {
+                for (int channel = 0; channel < channels; channel++) {
+                    indexer.put(new long[]{row, col, channel}, indexer.get(row, col - 1, channel) );
+                }
+            }
+
+            for (int channel = 0; channel < channels; channel++) {
+                int v1 = indexer.get(row, seamInt - 1, channel);
+                int v2 = indexer.get(row, seamInt + 1, channel);
+                indexer.put(new long[]{row, seamInt, channel}, (v1 + v2) / 2);
+            }
+
+        }
+        return imgExtend;
     }
 
     private static void removeVerticalSeam(Mat baseImg, INDArray maskArea, INDArray seam) {
