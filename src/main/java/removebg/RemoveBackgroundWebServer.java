@@ -95,7 +95,8 @@ public class RemoveBackgroundWebServer {
 
     private static Mat drawSegment(Mat baseImg, INDArray objectArea) {
         long start = System.currentTimeMillis();
-        for (int i = 0; i < 512 && objectArea.any(); i++) {
+        for (int i = 0; i < 66 && objectArea.any(); i++) {
+            System.out.println(Nd4j.getExecutioner().exec(new CountNonZero(objectArea)));
             Mat energy = computeEnergyMatrixModified(baseImg, objectArea);
             INDArray seam = findVerticalSeam(baseImg, energy);
             baseImg = removeVerticalSeam(baseImg, seam);
@@ -164,10 +165,6 @@ public class RemoveBackgroundWebServer {
                 if (mask != 0) {
                     indexer.put(i, j, 0);
                 }
-//                else{
-//                    indexer.put(i, j, 1);
-//
-//                }
             }
         }
         return energyMatrix;
