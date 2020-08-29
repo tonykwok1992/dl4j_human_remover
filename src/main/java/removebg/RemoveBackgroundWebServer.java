@@ -7,9 +7,7 @@ import org.bytedeco.opencv.opencv_core.Range;
 import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.api.ops.impl.reduce.bool.Any;
 import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
-import org.nd4j.linalg.api.ops.impl.reduce.longer.CountZero;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import spark.Request;
@@ -53,10 +51,9 @@ public class RemoveBackgroundWebServer {
         System.out.println("Received bytes with length " + body.length);
         long start = System.currentTimeMillis();
         Mat resizedImageMat = convertToMat(body);
-        INDArray input = matToIndArray(resizedImageMat);
-        INDArray predicted = predict(input);
-
-        Mat bufferedImage = drawSegment(resizedImageMat, predicted);
+        INDArray input = cvMatToINDArrayResized(resizedImageMat);
+        INDArray predicted = predictHumanMask(input);
+        Mat bufferedImage = removeHumanFromImage(resizedImageMat, predicted);
         ByteBuffer buffer = ByteBuffer.allocate(1000000); //TODO: use pool / thread local
         imencode(".png", bufferedImage, buffer);
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
@@ -77,14 +74,14 @@ public class RemoveBackgroundWebServer {
         return mat;
     }
 
-    private INDArray predict(INDArray input) {
+    private INDArray predictHumanMask(INDArray input) {
         long start = System.currentTimeMillis();
         INDArray result = b.predict(input);
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish predicting segment from model");
         return result;
     }
 
-    private static INDArray matToIndArray(Mat mat) throws IOException {
+    private static INDArray cvMatToINDArrayResized(Mat mat) throws IOException {
         long start = System.currentTimeMillis();
         NativeImageLoader nativeImageLoader = new NativeImageLoader();
         INDArray indArray = nativeImageLoader.asMatrix(mat).permute(0, 2, 3, 1);
@@ -93,17 +90,17 @@ public class RemoveBackgroundWebServer {
     }
 
 
-    private static Mat drawSegment(Mat baseImg, INDArray objectArea) {
+    private static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
         long start = System.currentTimeMillis();
-        for (int i = 0; i < 66 && objectArea.any(); i++) {
-            System.out.println(Nd4j.getExecutioner().exec(new CountNonZero(objectArea)));
-            Mat energy = computeEnergyMatrixModified(baseImg, objectArea);
+        for (int i = 0; i < 66 && maskArea.any(); i++) {
+            System.out.println(Nd4j.getExecutioner().exec(new CountNonZero(maskArea)));
+            Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
             INDArray seam = findVerticalSeam(baseImg, energy);
             baseImg = removeVerticalSeam(baseImg, seam);
-            objectArea = removeVerticalSeamFromMask(objectArea, seam);
+            maskArea = removeVerticalSeamFromMask(maskArea, seam);
         }
 
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish drawing output image");
+        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
         return baseImg;
     }
 
@@ -155,7 +152,7 @@ public class RemoveBackgroundWebServer {
         return energyMatrix;
     }
 
-    public static Mat computeEnergyMatrixModified(Mat img, INDArray objectArea) {
+    public static Mat computeEnergyMatrixWithMask(Mat img, INDArray objectArea) {
         Mat energyMatrix = computeEnergyMatrix(img);
         UByteIndexer indexer = energyMatrix.createIndexer();
 
