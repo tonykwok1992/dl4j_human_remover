@@ -96,15 +96,16 @@ public class RemoveBackgroundWebServer {
             System.out.println(Nd4j.getExecutioner().exec(new CountNonZero(maskArea)));
             Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
             INDArray seam = findVerticalSeam(baseImg, energy);
-            baseImg = removeVerticalSeam(baseImg, seam);
-            maskArea = removeVerticalSeamFromMask(maskArea, seam);
+            removeVerticalSeam(baseImg, maskArea, seam);
+            baseImg = baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
+            maskArea = maskArea.get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(0, baseImg.cols() - 1));
         }
 
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
         return baseImg;
     }
 
-    private static Mat removeVerticalSeam(Mat baseImg, INDArray seam) {
+    private static void removeVerticalSeam(Mat baseImg, INDArray maskArea, INDArray seam) {
         int rows = baseImg.rows();
         int cols = baseImg.cols();
         int channels = baseImg.channels();
@@ -114,23 +115,10 @@ public class RemoveBackgroundWebServer {
             for (int col = seam.getInt(row); col < cols - 1; col++) {
                 for (int channel = 0; channel < channels; channel++) {
                     indexer.put(row, col, channel, indexer.get(row, col + 1, channel));
+                    maskArea.putScalar(new long[]{0, row, col}, maskArea.getDouble(new long[]{0, row, col + 1}));
                 }
             }
         }
-        return baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
-    }
-
-    private static INDArray removeVerticalSeamFromMask(INDArray baseImg, INDArray seam) {
-        int rows = baseImg.get(NDArrayIndex.point(0)).rows();
-        int cols = baseImg.get(NDArrayIndex.point(0)).columns();
-
-        for (int row = 0; row < rows; row++) {
-            for (int col = seam.getInt(row); col < cols - 1; col++) {
-                baseImg.putScalar(new long[]{0, row, col}, baseImg.getDouble(new long[]{0, row, col + 1}));
-            }
-        }
-
-        return baseImg.get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(0, cols - 1));
     }
 
     public static Mat computeEnergyMatrix(Mat img) {
