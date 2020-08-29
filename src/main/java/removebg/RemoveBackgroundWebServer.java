@@ -9,6 +9,7 @@ import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import spark.Request;
 import spark.Response;
@@ -24,6 +25,8 @@ import static org.bytedeco.opencv.global.opencv_imgproc.*;
 public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
+    private static final int MAX_WIDTH_TO_REMOVE = (int) (INPUT_SIZE / 2);
+    private static final int NO_IMPROVEMENT_COUNT_BREAK = 5;
     private final BackgroundRemover b = BackgroundRemover.loadModel(System.getenv("MODEL_PATH"));
 
     public static void main(String[] args) {
@@ -92,13 +95,26 @@ public class RemoveBackgroundWebServer {
 
     private static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
         long start = System.currentTimeMillis();
-        for (int i = 0; i < 66 && maskArea.any(); i++) {
-            System.out.println(Nd4j.getExecutioner().exec(new CountNonZero(maskArea)));
+        final INDArrayIndex allIndex = NDArrayIndex.all();
+
+        int lastNonZeroCount = Integer.MAX_VALUE;
+        int noImproveCount = 0;
+        for (int i = 0; i < MAX_WIDTH_TO_REMOVE && noImproveCount <= NO_IMPROVEMENT_COUNT_BREAK; i++) {
+            int currentNonZeroCount = Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0);
+            System.out.println("lastNonZeroCount: " + lastNonZeroCount);
+            System.out.println("noImproveCount: " + noImproveCount);
+            if (lastNonZeroCount == currentNonZeroCount) {
+                noImproveCount++;
+            }else{
+                noImproveCount = 0;
+            }
             Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
             baseImg = baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
-            maskArea = maskArea.get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(0, baseImg.cols() - 1));
+            maskArea = maskArea.get(allIndex, allIndex, NDArrayIndex.interval(0, baseImg.cols() - 1));
+
+            lastNonZeroCount = currentNonZeroCount;
         }
 
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
