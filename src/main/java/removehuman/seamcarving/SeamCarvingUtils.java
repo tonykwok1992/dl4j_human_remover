@@ -1,113 +1,39 @@
-package removebg;
+package removehuman.seamcarving;
 
 import org.bytedeco.javacpp.indexer.Indexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
 import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Range;
-import org.bytedeco.opencv.opencv_core.Size;
-import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
-import spark.Request;
-import spark.Response;
-import spark.Spark;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import removehuman.WebServer;
 
 import static org.bytedeco.opencv.global.opencv_core.*;
-import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.*;
 
-public class RemoveBackgroundWebServer {
+public class SeamCarvingUtils {
 
-    private static final double INPUT_SIZE = 512.0d;
-    private static final int MAX_WIDTH_TO_REMOVE = 150;
     private static final int NO_IMPROVEMENT_COUNT_BREAK = 10;
-    private final BackgroundRemover b = BackgroundRemover.loadModel(System.getenv("MODEL_PATH"));
+    private static final INDArrayIndex ALL_INDEX = NDArrayIndex.all();
 
-    public static void main(String[] args) {
-        new RemoveBackgroundWebServer().start();
-    }
-
-    private void start() {
-        Spark.port(5000);
-        Spark.post("/removebg", this::inference);
-        Spark.awaitInitialization();
-        System.out.println("Started");
-    }
-
-    private Object inference(Request request, Response response) throws IOException {
-        try {
-            return doInference(request, response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
-        }
-    }
-
-    private Object doInference(Request request, Response response) throws IOException {
-        byte[] body = request.bodyAsBytes();
-        System.out.println("Received bytes with length " + body.length);
+    public static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
         long start = System.currentTimeMillis();
-        Mat resizedImageMat = convertToMat(body);
-        INDArray input = cvMatToINDArrayResized(resizedImageMat);
-        INDArray predicted = predictHumanMask(input);
-        Mat bufferedImage = removeHumanFromImage(resizedImageMat, predicted);
-        ByteBuffer buffer = ByteBuffer.allocate(1000000); //TODO: use pool / thread local
-        imencode(".png", bufferedImage, buffer);
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
-        response.raw().setContentType("image/png");
-        return buffer;
-    }
-
-
-    private Mat convertToMat(byte[] body) {
-        Mat baseImgMat = imdecode(new Mat(body), IMREAD_UNCHANGED);
-        double resizeRatio = INPUT_SIZE / Math.max(baseImgMat.cols(), baseImgMat.rows());
-        while (resizeRatio > 1.0d) {
-            resizeRatio /= 2;
-        }
-        Size size = new Size((int) (baseImgMat.cols() * resizeRatio), (int) (baseImgMat.rows() * resizeRatio));
-        Mat mat = new Mat(size);
-        resize(baseImgMat, mat, size);
-        return mat;
-    }
-
-    private INDArray predictHumanMask(INDArray input) {
-        long start = System.currentTimeMillis();
-        INDArray result = b.predict(input);
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish predicting segment from model");
-        return result;
-    }
-
-    private static INDArray cvMatToINDArrayResized(Mat mat) throws IOException {
-        long start = System.currentTimeMillis();
-        NativeImageLoader nativeImageLoader = new NativeImageLoader();
-        INDArray indArray = nativeImageLoader.asMatrix(mat).permute(0, 2, 3, 1);
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish converting image to nd array");
-        return indArray;
-    }
-
-
-    private static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
-        long start = System.currentTimeMillis();
-        final INDArrayIndex allIndex = NDArrayIndex.all();
         int oriRow = baseImg.cols();
+        int maxWidthToRemove = oriRow / 4;
 
         Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
         Recorder record = new Recorder(NO_IMPROVEMENT_COUNT_BREAK);
-        for (int i = 0; i < MAX_WIDTH_TO_REMOVE ; i++) {
+        for (int i = 0; i < maxWidthToRemove ; i++) {
             if(!record.record(Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0))){
                 break;
             }
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
             baseImg = baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
-            maskArea = maskArea.get(allIndex, allIndex, NDArrayIndex.interval(0, baseImg.cols() - 1));
+            maskArea = maskArea.get(ALL_INDEX, ALL_INDEX, NDArrayIndex.interval(0, baseImg.cols() - 1));
             energy = computeEnergyMatrixWithMask(baseImg, maskArea);
 
         }
@@ -115,7 +41,6 @@ public class RemoveBackgroundWebServer {
         Mat imgOut = baseImg.clone();
 
         int toAddCount = oriRow - baseImg.cols();
-        toAddCount = Math.min(toAddCount, baseImg.cols());
         for (int i = 0; i < toAddCount; i++) {
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
@@ -125,7 +50,6 @@ public class RemoveBackgroundWebServer {
             energy = computeEnergyMatrix(baseImg);
 
         }
-
 
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
         return imgOut;
@@ -262,28 +186,5 @@ public class RemoveBackgroundWebServer {
         }
         return seam;
     }
-
-    private static class Recorder {
-
-        private int lastNonZeroCount = Integer.MAX_VALUE;
-        private int noImproveCount = 0;
-        private final int threshold;
-
-        public Recorder(int threshold) {
-            this.threshold = threshold;
-        }
-
-        public boolean record(int currentNonZeroCount) {
-            if (lastNonZeroCount == currentNonZeroCount) {
-                noImproveCount++;
-            } else {
-                noImproveCount = 0;
-            }
-            lastNonZeroCount = currentNonZeroCount;
-            return noImproveCount < threshold;
-        }
-
-    }
-
 
 }

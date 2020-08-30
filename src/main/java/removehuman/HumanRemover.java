@@ -1,26 +1,28 @@
-package removebg;
+package removehuman;
 
 import org.nd4j.autodiff.execution.NativeGraphExecutioner;
 import org.nd4j.autodiff.samediff.SameDiff;
 import org.nd4j.imports.graphmapper.tf.TFGraphMapper;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.indexing.INDArrayIndex;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import java.io.File;
 
-public class BackgroundRemover {
+public class HumanRemover {
 
     private static final int RESULT_INDEX = 4;
     private static final String DEFAULT_MODEL_FILE_PATH = "/etc/model/model.pb";
     private final SameDiff sd;
 
-    public static BackgroundRemover loadModel(String file) {
+    public static HumanRemover loadModel(String file) {
         if (file == null) {
             file = DEFAULT_MODEL_FILE_PATH;
         }
-        return new BackgroundRemover(TFGraphMapper.importGraph(new File(file)));
+        return new HumanRemover(TFGraphMapper.importGraph(new File(file)));
     }
 
-    private BackgroundRemover(SameDiff sd) {
+    private HumanRemover(SameDiff sd) {
         this.sd = sd;
     }
 
