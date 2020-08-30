@@ -152,6 +152,8 @@ public class RemoveBackgroundWebServer {
 
         for (int row = 0; row < rows; row++) {
             int seamInt = seam.getInt(row);
+            if(seamInt == 0) continue;
+            if(seamInt == cols-1) continue;
             for (int col = cols; col > seamInt; col--) {
                 for (int channel = 0; channel < channels; channel++) {
                     indexer.put(new long[]{row, col, channel}, indexer.get(row, col - 1, channel) );
