@@ -26,7 +26,7 @@ public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
     private static final int MAX_WIDTH_TO_REMOVE = (int) (INPUT_SIZE / 2);
-    private static final int NO_IMPROVEMENT_COUNT_BREAK = 5;
+    private static final int NO_IMPROVEMENT_COUNT_BREAK = 8;
     private final BackgroundRemover b = BackgroundRemover.loadModel(System.getenv("MODEL_PATH"));
 
     public static void main(String[] args) {
@@ -99,21 +99,19 @@ public class RemoveBackgroundWebServer {
         int oriRow = baseImg.cols();
         int lastNonZeroCount = Integer.MAX_VALUE;
         int noImproveCount = 0;
-        Mat energy = null;
+        Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
         for (int i = 0; i < MAX_WIDTH_TO_REMOVE && noImproveCount <= NO_IMPROVEMENT_COUNT_BREAK; i++) {
             int currentNonZeroCount = Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0);
-            System.out.println("lastNonZeroCount: " + lastNonZeroCount);
-            System.out.println("noImproveCount: " + noImproveCount);
             if (lastNonZeroCount == currentNonZeroCount) {
                 noImproveCount++;
             } else {
                 noImproveCount = 0;
             }
-            energy = computeEnergyMatrixWithMask(baseImg, maskArea);
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
             baseImg = baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
             maskArea = maskArea.get(allIndex, allIndex, NDArrayIndex.interval(0, baseImg.cols() - 1));
+            energy = computeEnergyMatrixWithMask(baseImg, maskArea);
 
             lastNonZeroCount = currentNonZeroCount;
         }
