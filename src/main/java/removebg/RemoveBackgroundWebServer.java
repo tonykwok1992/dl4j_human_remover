@@ -25,8 +25,8 @@ import static org.bytedeco.opencv.global.opencv_imgproc.*;
 public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
-    private static final int MAX_WIDTH_TO_REMOVE = (int) (INPUT_SIZE / 2);
-    private static final int NO_IMPROVEMENT_COUNT_BREAK = 8;
+    private static final int MAX_WIDTH_TO_REMOVE = 200;
+    private static final int NO_IMPROVEMENT_COUNT_BREAK = 1000;
     private final BackgroundRemover b = BackgroundRemover.loadModel(System.getenv("MODEL_PATH"));
 
     public static void main(String[] args) {
@@ -97,15 +97,12 @@ public class RemoveBackgroundWebServer {
         long start = System.currentTimeMillis();
         final INDArrayIndex allIndex = NDArrayIndex.all();
         int oriRow = baseImg.cols();
-        int lastNonZeroCount = Integer.MAX_VALUE;
-        int noImproveCount = 0;
+
         Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
-        for (int i = 0; i < MAX_WIDTH_TO_REMOVE && noImproveCount <= NO_IMPROVEMENT_COUNT_BREAK; i++) {
-            int currentNonZeroCount = Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0);
-            if (lastNonZeroCount == currentNonZeroCount) {
-                noImproveCount++;
-            } else {
-                noImproveCount = 0;
+        Recorder record = new Recorder(NO_IMPROVEMENT_COUNT_BREAK);
+        for (int i = 0; i < MAX_WIDTH_TO_REMOVE ; i++) {
+            if(!record.record(Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0))){
+                break;
             }
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
@@ -113,12 +110,12 @@ public class RemoveBackgroundWebServer {
             maskArea = maskArea.get(allIndex, allIndex, NDArrayIndex.interval(0, baseImg.cols() - 1));
             energy = computeEnergyMatrixWithMask(baseImg, maskArea);
 
-            lastNonZeroCount = currentNonZeroCount;
         }
 
         Mat imgOut = baseImg.clone();
 
         int toAddCount = oriRow - baseImg.cols();
+        toAddCount = Math.min(toAddCount, baseImg.cols());
         for (int i = 0; i < toAddCount; i++) {
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
@@ -262,6 +259,28 @@ public class RemoveBackgroundWebServer {
             seam.putScalar(i - 1, seam.getDouble(i) + edgeTo.getDouble(i, seam.getInt(i)));
         }
         return seam;
+    }
+
+    private static class Recorder {
+
+        private int lastNonZeroCount = Integer.MAX_VALUE;
+        private int noImproveCount = 0;
+        private final int threshold;
+
+        public Recorder(int threshold) {
+            this.threshold = threshold;
+        }
+
+        public boolean record(int currentNonZeroCount) {
+            if (lastNonZeroCount == currentNonZeroCount) {
+                noImproveCount++;
+            } else {
+                noImproveCount = 0;
+            }
+            lastNonZeroCount = currentNonZeroCount;
+            return noImproveCount < threshold;
+        }
+
     }
 
 
