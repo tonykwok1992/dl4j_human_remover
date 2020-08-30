@@ -9,7 +9,6 @@ import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
-import removehuman.WebServer;
 
 import static org.bytedeco.opencv.global.opencv_core.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.*;
@@ -22,7 +21,7 @@ public class SeamCarvingUtils {
     public static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
         long start = System.currentTimeMillis();
         int oriRow = baseImg.cols();
-        int maxWidthToRemove = oriRow / 4;
+        int maxWidthToRemove = oriRow / 4; //Assume you cannot cut more than one-forth of width from photos
 
         Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
         Recorder record = new Recorder(NO_IMPROVEMENT_COUNT_BREAK);
@@ -32,8 +31,8 @@ public class SeamCarvingUtils {
             }
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
-            baseImg = baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
-            maskArea = maskArea.get(ALL_INDEX, ALL_INDEX, NDArrayIndex.interval(0, baseImg.cols() - 1));
+            baseImg = decrementWidthByOne(baseImg);
+            maskArea = decrementWidthByOne(maskArea);
             energy = computeEnergyMatrixWithMask(baseImg, maskArea);
 
         }
@@ -44,8 +43,7 @@ public class SeamCarvingUtils {
         for (int i = 0; i < toAddCount; i++) {
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);
-            baseImg = baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
-
+            baseImg = decrementWidthByOne(baseImg);
             imgOut = addVerticalSeam(imgOut, seam, i);
             energy = computeEnergyMatrix(baseImg);
 
@@ -53,6 +51,14 @@ public class SeamCarvingUtils {
 
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
         return imgOut;
+    }
+
+    private static INDArray decrementWidthByOne(INDArray maskArea) {
+        return maskArea.get(ALL_INDEX, ALL_INDEX, NDArrayIndex.interval(0, maskArea.shape()[2] - 1));
+    }
+
+    private static Mat decrementWidthByOne(Mat baseImg) {
+        return baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
     }
 
     private static Mat addVerticalSeam(Mat baseImg, INDArray seam, int numIter) {
