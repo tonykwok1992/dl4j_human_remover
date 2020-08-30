@@ -25,8 +25,8 @@ import static org.bytedeco.opencv.global.opencv_imgproc.*;
 public class RemoveBackgroundWebServer {
 
     private static final double INPUT_SIZE = 512.0d;
-    private static final int MAX_WIDTH_TO_REMOVE = 200;
-    private static final int NO_IMPROVEMENT_COUNT_BREAK = 1000;
+    private static final int MAX_WIDTH_TO_REMOVE = 150;
+    private static final int NO_IMPROVEMENT_COUNT_BREAK = 8;
     private final BackgroundRemover b = BackgroundRemover.loadModel(System.getenv("MODEL_PATH"));
 
     public static void main(String[] args) {
