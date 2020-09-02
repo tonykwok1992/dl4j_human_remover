@@ -4,6 +4,7 @@ import org.bytedeco.javacpp.indexer.Indexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
 import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Range;
+import org.bytedeco.opencv.opencv_core.Rect;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
 import org.nd4j.linalg.factory.Nd4j;
@@ -61,23 +62,16 @@ public class SeamCarvingUtils {
         return baseImg.apply(new Range(0, baseImg.rows()), new Range(0, baseImg.cols() - 1));
     }
 
-    private static Mat addVerticalSeam(Mat baseImg, INDArray seam, int numIter) {
-        int rows = baseImg.rows();
-        int cols = baseImg.cols();
-        int channels = baseImg.channels();
+    private static Mat addVerticalSeam(Mat imgOut, INDArray seam, int numIter) {
+        int rows = imgOut.rows();
+        int cols = imgOut.cols();
+        int channels = imgOut.channels();
 
-        Mat imgExtend = new Mat(baseImg.rows(), baseImg.cols()+1, baseImg.type());
-        UByteIndexer baseImgIndexer = baseImg.createIndexer();
+        Mat imgExtend = new Mat(imgOut.rows(), imgOut.cols() + 1, imgOut.type());
+        Mat roiImgExtend = new Mat(imgExtend, new Rect(0, 0, imgOut.cols(), imgOut.rows()));
+        imgOut.copyTo(roiImgExtend);
+
         UByteIndexer indexer = imgExtend.createIndexer();
-
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                for (int channel = 0; channel < channels; channel++) {
-                    indexer.put(new long[]{row, col, channel}, baseImgIndexer.get(row, col, channel) );
-                }
-            }
-        }
-
         seam = seam.add(numIter);
 
         for (int row = 0; row < rows; row++) {
