@@ -20,8 +20,8 @@ public class SeamCarvingUtils {
 
     public static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
         long start = System.currentTimeMillis();
-        int oriRow = baseImg.cols();
-        int maxWidthToRemove = oriRow / 4; //Assume you cannot cut more than one-forth of width from photos
+        int originalCols = baseImg.cols();
+        int maxWidthToRemove = originalCols / 4; //Assume you cannot cut more than one-forth of width from photos
 
         Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
         Recorder record = new Recorder(NO_IMPROVEMENT_COUNT_BREAK);
@@ -39,7 +39,7 @@ public class SeamCarvingUtils {
 
         Mat imgOut = baseImg.clone();
 
-        int toAddCount = oriRow - baseImg.cols();
+        int toAddCount = originalCols - baseImg.cols();
         for (int i = 0; i < toAddCount; i++) {
             INDArray seam = findVerticalSeam(baseImg, energy);
             removeVerticalSeam(baseImg, maskArea, seam);

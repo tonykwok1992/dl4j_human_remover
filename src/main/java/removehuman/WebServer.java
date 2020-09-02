@@ -4,8 +4,6 @@ import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.indexing.INDArrayIndex;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import removehuman.seamcarving.SeamCarvingUtils;
 import spark.Request;
 import spark.Response;
@@ -15,7 +13,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
-import static org.bytedeco.opencv.global.opencv_imgproc.*;
+import static org.bytedeco.opencv.global.opencv_imgproc.resize;
 
 public class WebServer {
 
