@@ -2,6 +2,7 @@ package removehuman.seamcarving;
 
 import org.bytedeco.javacpp.indexer.Indexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
+import org.bytedeco.javacv.Java2DFrameUtils;
 import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Range;
 import org.bytedeco.opencv.opencv_core.Rect;
@@ -10,6 +11,11 @@ import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+
+import javax.imageio.ImageIO;
+
+import java.io.File;
+import java.io.IOException;
 
 import static org.bytedeco.opencv.global.opencv_core.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.*;
@@ -48,6 +54,11 @@ public class SeamCarvingUtils {
             imgOut = addVerticalSeam(imgOut, seam, i);
             energy = computeEnergyMatrix(baseImg);
 
+            try {
+                ImageIO.write(Java2DFrameUtils.toBufferedImage(imgOut), "png", new File("/tmp/imagesecond" + i + ".png"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
