@@ -58,7 +58,7 @@ public class WebServer {
 
 
     private Mat convertToMat(byte[] body) {
-        Mat baseImgMat = imdecode(new Mat(body), IMREAD_UNCHANGED);
+        Mat baseImgMat = imdecode(new Mat(body), IMREAD_COLOR);
         double resizeRatio = INPUT_SIZE / Math.max(baseImgMat.cols(), baseImgMat.rows());
         while (resizeRatio > 1.0d) {
             resizeRatio /= 2;

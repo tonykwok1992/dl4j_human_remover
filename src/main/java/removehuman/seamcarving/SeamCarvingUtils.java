@@ -11,6 +11,7 @@ import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import removehuman.AnimationGenerator;
 
 import javax.imageio.ImageIO;
 
@@ -27,6 +28,7 @@ public class SeamCarvingUtils {
 
     public static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
         long start = System.currentTimeMillis();
+        AnimationGenerator animationGenerator = new AnimationGenerator();
         int originalCols = baseImg.cols();
         int maxWidthToRemove = originalCols / 4; //Assume you cannot cut more than one-forth of width from photos
 
@@ -42,6 +44,8 @@ public class SeamCarvingUtils {
             maskArea = decrementWidthByOne(maskArea);
             energy = computeEnergyMatrixWithMask(baseImg, maskArea);
 
+            animationGenerator.recordFrame(baseImg);
+
         }
 
         Mat imgOut = baseImg.clone();
@@ -54,11 +58,7 @@ public class SeamCarvingUtils {
             imgOut = addVerticalSeam(imgOut, seam, i);
             energy = computeEnergyMatrix(baseImg);
 
-            try {
-                ImageIO.write(Java2DFrameUtils.toBufferedImage(imgOut), "png", new File("/tmp/imagesecond" + i + ".png"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            animationGenerator.recordFrame(imgOut);
         }
 
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
