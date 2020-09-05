@@ -2,7 +2,6 @@ package removehuman.seamcarving;
 
 import org.bytedeco.javacpp.indexer.Indexer;
 import org.bytedeco.javacpp.indexer.UByteIndexer;
-import org.bytedeco.javacv.Java2DFrameUtils;
 import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Range;
 import org.bytedeco.opencv.opencv_core.Rect;
@@ -12,11 +11,6 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import removehuman.AnimationGenerator;
-
-import javax.imageio.ImageIO;
-
-import java.io.File;
-import java.io.IOException;
 
 import static org.bytedeco.opencv.global.opencv_core.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.*;
@@ -35,7 +29,8 @@ public class SeamCarvingUtils {
         Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
         Recorder record = new Recorder(NO_IMPROVEMENT_COUNT_BREAK);
         for (int i = 0; i < maxWidthToRemove ; i++) {
-            if(!record.record(Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0))){
+            int nonZeroCount = Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0);
+            if(nonZeroCount != 0 && !record.record(nonZeroCount)){
                 break;
             }
             INDArray seam = findVerticalSeam(baseImg, energy);

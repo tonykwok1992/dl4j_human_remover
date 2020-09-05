@@ -28,7 +28,8 @@ public class HumanRemover {
         sd.associateArrayWithVariable(indArray, sd.variables().get(0));
         NativeGraphExecutioner executioner = new NativeGraphExecutioner();
         INDArray[] results = executioner.executeGraph(sd);
-        return results[RESULT_INDEX];
+        INDArray result = results[RESULT_INDEX];
+        return result;
     }
 
 }
