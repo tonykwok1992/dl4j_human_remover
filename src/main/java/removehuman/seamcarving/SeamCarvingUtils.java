@@ -25,22 +25,7 @@ public class SeamCarvingUtils {
         AnimationGenerator animationGenerator = new AnimationGenerator();
         int originalCols = baseImg.cols();
 
-        int from = Integer.MAX_VALUE;
-        int to = Integer.MIN_VALUE;
-        for (int col = 0; col < maskArea.shape()[2]; ++col) {
-            INDArray column = maskArea.get(NDArrayIndex.point(0), ALL_INDEX, NDArrayIndex.point(col));
-            if(column.any()){
-                from = Math.min(from, col);
-            }
-
-            INDArray column2 = maskArea.get(NDArrayIndex.point(0), ALL_INDEX, NDArrayIndex.point(maskArea.shape()[2]-1-col));
-            if(column2.any()){
-                to = Math.max(to, col);
-            }
-        }
-
-
-        int maxWidthToRemove = to-from; 
+        int maxWidthToRemove = originalCols / 4; //Assume you cannot cut more than one-forth of width from photos
 
         Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
         ProgressRecorder progressRecorder = new ProgressRecorder(NO_IMPROVEMENT_COUNT_BREAK);
