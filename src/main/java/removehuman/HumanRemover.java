@@ -39,16 +39,16 @@ public class HumanRemover {
         long[] shape = result.shape();
         INDArray paddedResult = result.like();
 
-        for (int i = 0; i < shape[1]; ++i) {
-            for (int j = 0; j < shape[2]; ++j) {
-                int l = i >= PADDING ? result.getInt(0, i-PADDING, j) : 0;
-                int r = i < shape[1]- PADDING ? result.getInt(0, i+PADDING, j) : 0;
+        for (int row = 0; row < shape[1]; ++row) {
+            for (int col = 0; col < shape[2]; ++col) {
+                int l = row >= PADDING ? result.getInt(0, row-PADDING, col) : 0;
+                int r = row < shape[1]- PADDING ? result.getInt(0, row+PADDING, col) : 0;
 
-                int u = j >= PADDING ? result.getInt(0, i, j-PADDING) : 0;
-                int d = j < shape[2]- PADDING ? result.getInt(0, i, j+PADDING) : 0;
+                int u = col >= PADDING ? result.getInt(0, row, col-PADDING) : 0;
+                int d = col < shape[2]- PADDING ? result.getInt(0, row, col+PADDING) : 0;
 
-                int x = result.getInt(0, i, j);
-                paddedResult.putScalar(new long[]{0, i, j}, x + l + r + u + d);
+                int x = result.getInt(0, row, col);
+                paddedResult.putScalar(new long[]{0, row, col}, x + l + r + u + d);
 
             }
         }

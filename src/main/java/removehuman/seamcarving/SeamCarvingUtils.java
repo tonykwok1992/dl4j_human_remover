@@ -17,19 +17,36 @@ import static org.bytedeco.opencv.global.opencv_imgproc.*;
 
 public class SeamCarvingUtils {
 
-    private static final int NO_IMPROVEMENT_COUNT_BREAK = 10;
+    private static final int NO_IMPROVEMENT_COUNT_BREAK = 3;
     private static final INDArrayIndex ALL_INDEX = NDArrayIndex.all();
 
     public static Mat removeHumanFromImage(Mat baseImg, INDArray maskArea) {
         long start = System.currentTimeMillis();
         AnimationGenerator animationGenerator = new AnimationGenerator();
         int originalCols = baseImg.cols();
-        int maxWidthToRemove = originalCols / 4; //Assume you cannot cut more than one-forth of width from photos
+
+        int from = Integer.MAX_VALUE;
+        int to = Integer.MIN_VALUE;
+        for (int col = 0; col < maskArea.shape()[2]; ++col) {
+            INDArray column = maskArea.get(NDArrayIndex.point(0), ALL_INDEX, NDArrayIndex.point(col));
+            if(column.any()){
+                from = Math.min(from, col);
+            }
+
+            INDArray column2 = maskArea.get(NDArrayIndex.point(0), ALL_INDEX, NDArrayIndex.point(maskArea.shape()[2]-1-col));
+            if(column2.any()){
+                to = Math.max(to, col);
+            }
+        }
+
+
+        int maxWidthToRemove = to-from; 
 
         Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
         ProgressRecorder progressRecorder = new ProgressRecorder(NO_IMPROVEMENT_COUNT_BREAK);
         for (int i = 0; i < maxWidthToRemove ; i++) {
             int nonZeroCount = Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0);
+            System.out.println(nonZeroCount);
             if(nonZeroCount == 0 || !progressRecorder.record(nonZeroCount)){
                 break;
             }

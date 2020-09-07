@@ -50,9 +50,9 @@ public class WebServer {
         INDArray predicted = predictHumanMask(input);
         Mat bufferedImage = SeamCarvingUtils.removeHumanFromImage(resizedImageMat, predicted);
         ByteBuffer buffer = ByteBuffer.allocate(1000000); //TODO: use pool / thread local
-        imencode(".png", bufferedImage, buffer);
+        imencode(".jpg", bufferedImage, buffer);
         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
-        response.raw().setContentType("image/png");
+        response.raw().setContentType("image/jpeg");
         return buffer;
     }
 
