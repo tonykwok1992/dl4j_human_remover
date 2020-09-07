@@ -1,12 +1,12 @@
 package removehuman.seamcarving;
 
-class Recorder {
+class ProgressRecorder {
 
     private int lastNonZeroCount = Integer.MAX_VALUE;
     private int noImproveCount = 0;
     private final int threshold;
 
-    public Recorder(int threshold) {
+    public ProgressRecorder(int threshold) {
         this.threshold = threshold;
     }
 

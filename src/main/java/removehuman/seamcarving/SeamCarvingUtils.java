@@ -27,10 +27,10 @@ public class SeamCarvingUtils {
         int maxWidthToRemove = originalCols / 4; //Assume you cannot cut more than one-forth of width from photos
 
         Mat energy = computeEnergyMatrixWithMask(baseImg, maskArea);
-        Recorder record = new Recorder(NO_IMPROVEMENT_COUNT_BREAK);
+        ProgressRecorder progressRecorder = new ProgressRecorder(NO_IMPROVEMENT_COUNT_BREAK);
         for (int i = 0; i < maxWidthToRemove ; i++) {
             int nonZeroCount = Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0);
-            if(nonZeroCount == 0 || !record.record(nonZeroCount)){
+            if(nonZeroCount == 0 || !progressRecorder.record(nonZeroCount)){
                 break;
             }
             INDArray seam = findVerticalSeam(baseImg, energy);
