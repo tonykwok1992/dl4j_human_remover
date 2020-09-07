@@ -30,7 +30,7 @@ public class SeamCarvingUtils {
         Recorder record = new Recorder(NO_IMPROVEMENT_COUNT_BREAK);
         for (int i = 0; i < maxWidthToRemove ; i++) {
             int nonZeroCount = Nd4j.getExecutioner().exec(new CountNonZero(maskArea)).getInt(0);
-            if(nonZeroCount != 0 && !record.record(nonZeroCount)){
+            if(nonZeroCount == 0 || !record.record(nonZeroCount)){
                 break;
             }
             INDArray seam = findVerticalSeam(baseImg, energy);
