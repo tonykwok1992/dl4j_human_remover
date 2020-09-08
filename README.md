@@ -25,8 +25,14 @@ curl http://localhost:5000/removehuman --data-binary "@/path_to_image/image.jpg"
 
 ## How it works
 
-### Image segementaion using deep learning
-This project imports a Deep Learning Image segmentation model (MobileNet) pretrained on tensorflow (http://download.tensorflow.org/models/deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz) to Deeplearning4j (nd4j) for detecting human from the photo
+Automatic human removal is essentially solving 2 problems.
+1. How to detect a human from photos.
+2. How to remove an object from photos with distorting the photo
+
+Point 1 is solved by the power of deep learning while the point 2 is solved by traditional computer vision algorithm
+
+### 1. Image segmentation using deep learning
+This project imports a Deep Learning Image segmentation model (MobileNet) pre-trained on Tensorflow (http://download.tensorflow.org/models/deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz) to Deeplearning4j (nd4j) for detecting human from the photo
 
 Input:
 <img src="demo/request.jpg" width="250"> 
@@ -34,8 +40,8 @@ Input:
 Mask:
 <img src="demo/mask.jpg" width="250">
 
-### Content-aware image resizing in Computer Vision (Seam Carving Algorithm)
-With the masked area detected, we make use of Seam Carving Algorithm (https://en.wikipedia.org/wiki/Seam_carving) with energy in masked area set to zero so that all seams will pass through the mask area during the down sizing. After all masked area removed, we will be (content-aware) upsizing the image again using the same algorithm.
+### 2. Content-aware image resizing in Computer Vision (Seam Carving Algorithm)
+With the masked area detected, we make use of Seam Carving Algorithm (https://en.wikipedia.org/wiki/Seam_carving) with energy in the masked area set to zero so that all seams will pass through the mask area during the downsizing. After all masked area removed, we will be (content-aware) upsizing the image again using the same algorithm.
 
 ## References
 https://en.wikipedia.org/wiki/Seam_carving
@@ -43,7 +49,7 @@ https://en.wikipedia.org/wiki/Seam_carving
 https://github.com/PacktPublishing/OpenCV-with-Python-By-Example/blob/master/Chapter07/object_removal.py
 
 ## Ideas / Improvement
-My original thought before discovering Seam Carving Algorithm is to use Deep Learning for Generative inpanting too (e.g. https://github.com/JiahuiYu/generative_inpainting). However, I find that it is not always that straight-forward to port tensorflow model to nd4j if it isn't already in frozen graph format. Therefore I've turned to traditional Computer Vision algorithm and find Seam Carving, which surprising produce better result visually on my few testing images.
+My original thought before discovering Seam Carving Algorithm is to use Deep Learning for Generative inpainting too (e.g. https://github.com/JiahuiYu/generative_inpainting). However, I find that it is not always that straightforward to port Tensorflow model to nd4j if it isn't already in frozen graph format. Therefore I've turned to traditional Computer Vision algorithm and find Seam Carving, which surprising produce better result visually on my few testing images.
 
 Feel free to submit Pull requests for idea contribution
 
