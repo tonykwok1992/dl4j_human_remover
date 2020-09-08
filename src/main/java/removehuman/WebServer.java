@@ -1,5 +1,6 @@
 package removehuman;
 
+import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.NativeImageLoader;
@@ -49,11 +50,13 @@ public class WebServer {
         INDArray input = cvMatToINDArrayResized(resizedImageMat);
         INDArray predicted = predictHumanMask(input);
         Mat bufferedImage = SeamCarvingUtils.removeHumanFromImage(resizedImageMat, predicted);
-        ByteBuffer buffer = ByteBuffer.allocate(1000000); //TODO: use pool / thread local
-        imencode(".jpg", bufferedImage, buffer);
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
+        BytePointer outputPointer = new BytePointer();
+        imencode(".jpg", bufferedImage, outputPointer);
+        byte[] outputBuffer = new byte[(int) outputPointer.limit()];
+        outputPointer.get(outputBuffer);
         response.raw().setContentType("image/jpeg");
-        return buffer;
+        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
+        return outputBuffer;
     }
 
 
