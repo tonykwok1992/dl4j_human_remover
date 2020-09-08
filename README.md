@@ -29,7 +29,7 @@ Automatic human removal is essentially solving 2 problems.
 1. How to detect a human from photos.
 2. How to remove an object from photos with distorting the photo
 
-Point 1 is solved by the power of deep learning while the point 2 is solved by traditional computer vision algorithm
+Point 1 is solved by the power of deep learning while point 2 is solved by traditional computer vision algorithm
 
 ### 1. Image segmentation using deep learning
 This project imports a Deep Learning Image segmentation model (MobileNet) pre-trained on Tensorflow (http://download.tensorflow.org/models/deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz) to Deeplearning4j (nd4j) for detecting human from the photo
