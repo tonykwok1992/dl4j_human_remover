@@ -19,10 +19,10 @@ RUN gradle build
 
 FROM openjdk:11-jre-slim
 RUN mkdir /app
-COPY --from=build /home/gradle/src/build/distributions/remove_background_dl4j.tar /app/remove_background_dl4j.tar
+COPY --from=build /home/gradle/src/build/distributions/dl4j_human_remover.tar /app/dl4j_human_remover.tar
 WORKDIR /app
-RUN tar -xvf remove_background_dl4j.tar
-RUN rm remove_background_dl4j.tar
+RUN tar -xvf dl4j_human_remover.tar
+RUN rm dl4j_human_remover.tar
 RUN mkdir -p /etc/model/
 COPY --from=model /etc/model/frozen_inference_graph.pb /etc/model/model.pb
-ENTRYPOINT ["/app/remove_background_dl4j/bin/remove_background_dl4j"]
+ENTRYPOINT ["/app/dl4j_human_remover/bin/dl4j_human_remover"]
