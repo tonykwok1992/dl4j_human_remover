@@ -35,9 +35,11 @@ Point 1 is solved by the power of deep learning while point 2 is solved by tradi
 This project imports a Deep Learning Image segmentation model (MobileNet) pre-trained on Tensorflow (http://download.tensorflow.org/models/deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz) to Deeplearning4j (nd4j) for detecting human from the photo
 
 Input:
+
 <img src="demo/request.jpg" width="250"> 
 
-Mask:
+Output as Mask:
+
 <img src="demo/mask.jpg" width="250">
 
 ### 2. Content-aware image resizing in Computer Vision (Seam Carving Algorithm)
