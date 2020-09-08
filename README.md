@@ -48,6 +48,14 @@ https://en.wikipedia.org/wiki/Seam_carving
 
 https://github.com/PacktPublishing/OpenCV-with-Python-By-Example/blob/master/Chapter07/object_removal.py
 
+## More examples
+
+<img src="demo/more_examples/request2.jpg" width="250"> <img src="demo/more_examples/response2.jpeg" width="250">
+
+<img src="demo/more_examples/request3.jpg" height="250"> <img src="demo/more_examples/response3.jpeg" height="250">
+
+<img src="demo/more_examples/request4.jpg" width="250"> <img src="demo/more_examples/response4.jpeg" width="250">
+
 ## Ideas / Improvement
 My original thought before discovering Seam Carving Algorithm is to use Deep Learning for Generative inpainting too (e.g. https://github.com/JiahuiYu/generative_inpainting). However, I found that it is not always that straightforward to port Tensorflow model to nd4j if it isn't already in frozen graph format. Therefore I've turned to traditional Computer Vision algorithm and find Seam Carving, which surprisingly produce a better result visually on my few testing images.
 
