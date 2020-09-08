@@ -26,8 +26,8 @@ curl http://localhost:5000/removehuman --data-binary "@/path_to_image/image.jpg"
 ## How it works
 
 Automatic human removal is essentially solving 2 problems.
-1. How to detect a human from photos.
-2. How to remove an object from photos with distorting the photo
+1. Detect a human from photos
+2. Remove an object from photos without distorting the photo
 
 Point 1 is solved by the power of deep learning while point 2 is solved by traditional computer vision algorithm
 
