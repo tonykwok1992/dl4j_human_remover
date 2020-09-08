@@ -26,8 +26,8 @@ curl http://localhost:5000/removehuman --data-binary "@/path_to_image/image.jpg"
 ## How it works
 
 Automatic human removal is essentially solving 2 problems.
-1. How to detect a human from photos.
-2. How to remove an object from photos with distorting the photo
+1. Detect a human from photos
+2. Remove an object from photos without distorting the photo
 
 Point 1 is solved by the power of deep learning while point 2 is solved by traditional computer vision algorithm
 
@@ -49,10 +49,6 @@ https://en.wikipedia.org/wiki/Seam_carving
 https://github.com/PacktPublishing/OpenCV-with-Python-By-Example/blob/master/Chapter07/object_removal.py
 
 ## Ideas / Improvement
-My original thought before discovering Seam Carving Algorithm is to use Deep Learning for Generative inpainting too (e.g. https://github.com/JiahuiYu/generative_inpainting). However, I find that it is not always that straightforward to port Tensorflow model to nd4j if it isn't already in frozen graph format. Therefore I've turned to traditional Computer Vision algorithm and find Seam Carving, which surprising produce better result visually on my few testing images.
+My original thought before discovering Seam Carving Algorithm is to use Deep Learning for Generative inpainting too (e.g. https://github.com/JiahuiYu/generative_inpainting). However, I found that it is not always that straightforward to port Tensorflow model to nd4j if it isn't already in frozen graph format. Therefore I've turned to traditional Computer Vision algorithm and find Seam Carving, which surprisingly produce a better result visually on my few testing images.
 
 Feel free to submit Pull requests for idea contribution
-
-
-
-
