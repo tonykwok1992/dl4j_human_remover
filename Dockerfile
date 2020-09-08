@@ -19,7 +19,7 @@ RUN gradle build
 
 FROM openjdk:11-jre-slim
 RUN mkdir /app
-COPY --from=build /home/gradle/src/build/distributions/*.tar /app/dl4j_human_remover.tar
+COPY --from=build /home/gradle/src/build/distributions/dl4j_human_remover.tar /app/dl4j_human_remover.tar
 WORKDIR /app
 RUN tar -xvf dl4j_human_remover.tar
 RUN rm dl4j_human_remover.tar
