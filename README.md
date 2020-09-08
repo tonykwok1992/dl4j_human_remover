@@ -1,4 +1,4 @@
-# Automatic Human removal using Image Segmentation in Deep Learning (dl4j) + Seam Carving Algorithm in Java
+# Automatic Human removal in photo using Image Segmentation in Deep Learning (dl4j) + Seam Carving Algorithm in Java
 
 ## Animated Demo
 ![Demo](demo/demo.gif)
