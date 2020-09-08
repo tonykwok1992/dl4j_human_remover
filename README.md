@@ -39,7 +39,13 @@ With the masked area detected, we make use of Seam Carving Algorithm (https://en
 
 ## References
 https://en.wikipedia.org/wiki/Seam_carving
+
 https://github.com/PacktPublishing/OpenCV-with-Python-By-Example/blob/master/Chapter07/object_removal.py
+
+## Ideas / Improvement
+My original thought before discovering Seam Carving Algorithm is to use Deep Learning for Generative inpanting too (e.g. https://github.com/JiahuiYu/generative_inpainting). However, I find that it is not always that straight-forward to port tensorflow model to nd4j if it isn't already in frozen graph format. Therefore I've turned to traditional Computer Vision algorithm and find Seam Carving, which surprising produce better result visually on my few testing images.
+
+Feel free to submit Pull requests for idea contribution
 
 
 
