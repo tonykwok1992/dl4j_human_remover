@@ -10,6 +10,8 @@ import org.nd4j.linalg.api.ops.impl.reduce.longer.CountNonZero;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import removehuman.AnimationGenerator;
 
 import static org.bytedeco.opencv.global.opencv_core.*;
@@ -17,6 +19,7 @@ import static org.bytedeco.opencv.global.opencv_imgproc.*;
 
 public class SeamCarvingUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(SeamCarvingUtils.class);
     private static final int NO_IMPROVEMENT_COUNT_BREAK = 5;
     private static final INDArrayIndex ALL_INDEX = NDArrayIndex.all();
 
@@ -57,7 +60,7 @@ public class SeamCarvingUtils {
             animationGenerator.recordFrame(imgOut);
         }
 
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish removing human from image");
+        logger.info("Took {}ms to finish removing human from image", (System.currentTimeMillis() - start));
         return imgOut;
     }
 

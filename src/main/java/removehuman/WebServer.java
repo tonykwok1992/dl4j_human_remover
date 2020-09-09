@@ -5,46 +5,44 @@ import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Size;
 import org.datavec.image.loader.NativeImageLoader;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import removehuman.seamcarving.SeamCarvingUtils;
 import spark.Request;
 import spark.Response;
 import spark.Spark;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.io.UncheckedIOException;
 
 import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.resize;
 
 public class WebServer {
 
+    private static final Logger logger = LoggerFactory.getLogger(WebServer.class);
     private static final double INPUT_SIZE = 512.0d;
-
-    private final HumanRemover b = HumanRemover.loadModel(System.getenv("MODEL_PATH"));
+    private final HumanRemover model;
 
     public static void main(String[] args) {
         new WebServer().start();
     }
 
+    public WebServer() {
+        model = HumanRemover.loadModel(System.getenv("MODEL_PATH"));
+    }
+
     private void start() {
+        logger.info("Starting Web server");
         Spark.port(5000);
         Spark.post("/removehuman", this::inference);
         Spark.awaitInitialization();
-        System.out.println("Started");
+        logger.info("Web server started at {}", Spark.port());
     }
 
-    private Object inference(Request request, Response response) throws IOException {
-        try {
-            return doInference(request, response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
-        }
-    }
-
-    private Object doInference(Request request, Response response) throws IOException {
+    private Object inference(Request request, Response response) {
         byte[] body = request.bodyAsBytes();
-        System.out.println("Received bytes with length " + body.length);
+        logger.info("Received bytes with length {}" , body.length);
         long start = System.currentTimeMillis();
         Mat resizedImageMat = convertToMat(body);
         INDArray input = cvMatToINDArrayResized(resizedImageMat);
@@ -55,7 +53,7 @@ public class WebServer {
         byte[] outputBuffer = new byte[(int) outputPointer.limit()];
         outputPointer.get(outputBuffer);
         response.raw().setContentType("image/jpeg");
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish all steps");
+        logger.info("Took {}ms to finish all steps", System.currentTimeMillis() - start);
         return outputBuffer;
     }
 
@@ -74,20 +72,22 @@ public class WebServer {
 
     private INDArray predictHumanMask(INDArray input) {
         long start = System.currentTimeMillis();
-        INDArray result = b.predict(input);
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish predicting segment from model");
+        INDArray result = model.predict(input);
+        logger.info("Took {}ms to finish predicting segment from model", System.currentTimeMillis() - start);
         return result;
     }
 
-    private static INDArray cvMatToINDArrayResized(Mat mat) throws IOException {
+    private static INDArray cvMatToINDArrayResized(Mat mat) {
         long start = System.currentTimeMillis();
         NativeImageLoader nativeImageLoader = new NativeImageLoader();
-        INDArray indArray = nativeImageLoader.asMatrix(mat).permute(0, 2, 3, 1);
-        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to finish converting image to nd array");
-        return indArray;
+        try {
+            INDArray indArray = nativeImageLoader.asMatrix(mat).permute(0, 2, 3, 1);
+            logger.info("Took {}ms to finish converting image to nd array", System.currentTimeMillis() - start);
+            return indArray;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
-
-
 
 
 }
