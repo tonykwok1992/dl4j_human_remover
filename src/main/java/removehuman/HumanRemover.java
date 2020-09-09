@@ -11,7 +11,7 @@ public class HumanRemover {
 
     private static final int RESULT_INDEX = 4;
     private static final int PADDING = 10;
-    private static final String DEFAULT_MODEL_FILE_PATH = "/etc/model/model.pb";
+    private static final String DEFAULT_MODEL_FILE_PATH = "/usr/local/model/model.pb";
     private final SameDiff sd;
 
     public static HumanRemover loadModel(String file) {
