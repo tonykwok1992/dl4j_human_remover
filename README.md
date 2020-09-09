@@ -9,6 +9,9 @@
 
 ## How to run
 
+### Docker
+docker is probably the easiest way to run this, so you do not have to download the model manually
+
 ```
 # Building the docker image, will take a while for the first time to download all dependencies
 docker build . -t dl4j_human_remover
@@ -22,6 +25,10 @@ docker run --rm -p 5000:5000 dl4j_human_remover
 curl http://localhost:5000/removehuman --data-binary "@/path_to_image/image.jpg" --output /output_path/output.jpg
 # where /path_to_image/image.jpg is the input and /output_path/output.jpg is the output file you want it to be located at
 ```
+
+### Intellij
+Download the model at http://download.tensorflow.org/models/deeplabv3_mnv2_pascal_train_aug_2018_01_29.tar.gz and extract it. Set environment variable MODEL_PATH to be where the extracted frozen_inference_graph.pb is at
+
 
 ## How it works
 
