@@ -42,9 +42,7 @@ public class SeamCarvingUtils {
             baseImg = decrementWidthByOne(baseImg);
             maskArea = decrementWidthByOne(maskArea);
             energy = computeEnergyMatrixWithMask(baseImg, maskArea);
-
             animationGenerator.recordFrame(baseImg);
-
         }
 
         Mat imgOut = baseImg.clone();
@@ -120,7 +118,7 @@ public class SeamCarvingUtils {
         }
     }
 
-    public static Mat computeEnergyMatrix(Mat img) {
+    private static Mat computeEnergyMatrix(Mat img) {
         Mat gray = new Mat();
         Mat sobelX = new Mat();
         Mat sobelY = new Mat();
@@ -139,7 +137,7 @@ public class SeamCarvingUtils {
         return energyMatrix;
     }
 
-    public static Mat computeEnergyMatrixWithMask(Mat img, INDArray objectArea) {
+    private static Mat computeEnergyMatrixWithMask(Mat img, INDArray objectArea) {
         Mat energyMatrix = computeEnergyMatrix(img);
         UByteIndexer indexer = energyMatrix.createIndexer();
 
@@ -154,7 +152,7 @@ public class SeamCarvingUtils {
         return energyMatrix;
     }
 
-    public static INDArray findVerticalSeam(Mat img, Mat energy) {
+    private static INDArray findVerticalSeam(Mat img, Mat energy) {
         int rows = img.rows();
         int cols = img.cols();
         INDArray distTo = Nd4j.zeros(rows, cols).assign(Double.MAX_VALUE);

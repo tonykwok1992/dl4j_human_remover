@@ -12,9 +12,15 @@ import java.io.IOException;
 public class AnimationGenerator {
 
     private static final Logger logger = LoggerFactory.getLogger(AnimationGenerator.class);
+    private static final String ANIMATION_ENABLED_ENV = System.getenv("ANIMATION_ENABLED");
+    private static final boolean ANIMATION_ENABLED = "Y".equals(ANIMATION_ENABLED_ENV);
     private int counter = 0;
 
     public void recordFrame(Mat img) {
+        if(!ANIMATION_ENABLED){
+            return;
+        }
+
         try {
             ImageIO.write(Java2DFrameUtils.toBufferedImage(img), "jpg", new File("/tmp/image" + String.format("%04d" , counter++) + ".jpg"));
         } catch (IOException e) {
