@@ -12,7 +12,11 @@ import spark.Request;
 import spark.Response;
 import spark.Spark;
 
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.ServletException;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.resize;
@@ -40,17 +44,14 @@ public class WebServer {
         logger.info("Web server started at {}", Spark.port());
     }
 
-    private Object inference(Request request, Response response) throws IOException {
-        try {
-            return doInference(request, response);
-        } catch (Exception e) {
-            logger.error("Error handling input. ", e);
-            throw e;
+    private Object inference(Request request, Response response) throws IOException, ServletException {
+        request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/temp"));
+        byte[] body;
+        try (InputStream is = request.raw().getPart("file").getInputStream()) {
+            body = new byte[is.available()];
+            is.read(body);
         }
-    }
 
-    private Object doInference(Request request, Response response) throws IOException {
-        byte[] body = request.bodyAsBytes();
         logger.info("Received bytes with length {}", body.length);
         long start = System.currentTimeMillis();
         Mat resizedImageMat = convertToMat(body);
@@ -65,7 +66,6 @@ public class WebServer {
         logger.info("Took {}ms to finish all steps", System.currentTimeMillis() - start);
         return outputBuffer;
     }
-
 
     private Mat convertToMat(byte[] body) {
         Mat baseImgMat = imdecode(new Mat(body), IMREAD_COLOR);
