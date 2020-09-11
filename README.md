@@ -21,8 +21,15 @@ docker build . -t dl4j_human_remover
 docker run --rm -p 5000:5000 dl4j_human_remover
 ```
 
+#### Test out your image:
+
+- Go to your browser at http://localhost:5000. The Web UI will allow you to upload a photo for testing
+
+- If you want to do it via command line, via curl
+
 ```
 curl http://localhost:5000/removehuman --data-binary "@/path_to_image/image.jpg" --output /output_path/output.jpg
+
 # where /path_to_image/image.jpg is the input and /output_path/output.jpg is the output file you want it to be located at
 ```
 
