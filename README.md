@@ -13,12 +13,15 @@
 docker is probably the easiest way to run this, so you do not have to download the model manually
 
 ```
-# Building the docker image, will take a while for the first time to download all dependencies
-docker build . -t dl4j_human_remover
+# pull the image from DockerHub
+docker pull tonykwok1992/dl4j-human-remover:1.0.0
+
+# OR, Building the docker image, will take a while for the first time to download all dependencies
+docker build . -t tonykwok1992/dl4j-human-remover:1.0.0
 ```
 ```
 # Run it as web server
-docker run --rm -p 5000:5000 dl4j_human_remover
+docker run --rm -p 5000:5000 tonykwok1992/dl4j-human-remover:1.0.0
 ```
 
 #### Test out your image:
