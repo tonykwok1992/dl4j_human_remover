@@ -28,7 +28,7 @@ docker run --rm -p 5000:5000 dl4j_human_remover
 - If you want to do it via command line, via curl
 
 ```
-curl http://localhost:5000/removehuman --data-binary "@/path_to_image/image.jpg" --output /output_path/output.jpg
+curl http://localhost:5000/api/removehuman --data-binary "@/path_to_image/image.jpg" --output /output_path/output.jpg
 
 # where /path_to_image/image.jpg is the input and /output_path/output.jpg is the output file you want it to be located at
 ```

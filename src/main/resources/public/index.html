@@ -133,7 +133,7 @@ $(function(){
 		$("#remove-human").addClass("btn-hide");
         var oReq = new XMLHttpRequest();
 
-        oReq.open("POST", "/removehuman", true);
+        oReq.open("POST", "/api/removehuman", true);
         oReq.responseType = "arraybuffer";
         
         oReq.onload = function(oEvent) {
