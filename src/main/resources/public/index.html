@@ -106,7 +106,7 @@
             <img id="mask" class="mask-finished">
         </div>
 
-        <input type="button" id="inpaint" value="inpaint" />
+        <input type="button" id="remove-human" value="Remove Human" />
     </form>
 </div>
 <script>
@@ -124,13 +124,13 @@ function UpdateImg(input) {
 
 $(function(){
 
-    $("#inpaint").click(function(){
+    $("#remove-human").click(function(){
         var fd = new FormData();
         var imagefile = $('#Image')[0].files[0];
         fd.append('file',imagefile);
 		console.log("Started uploading image to webserver");
 		$('#preview').addClass("img-busy");
-		$("#inpaint").addClass("btn-hide");
+		$("#remove-human").addClass("btn-hide");
         var oReq = new XMLHttpRequest();
 
         oReq.open("POST", "/removehuman", true);
@@ -142,7 +142,7 @@ $(function(){
         	var blob = new Blob([arrayBuffer], {type: "image/jpeg"});
         	var url = URL.createObjectURL(blob);
 			console.log("Done");
-			$("#inpaint").removeClass("btn-hide");
+			$("#remove-human").removeClass("btn-hide");
 			$("#mask")
 				.addClass("mask-finished");
 			$('#preview')
@@ -152,9 +152,6 @@ $(function(){
         };
         
         oReq.send(fd);
-
-
-
     });
 });
 
