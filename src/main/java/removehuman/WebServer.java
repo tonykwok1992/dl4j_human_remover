@@ -12,8 +12,11 @@ import spark.Request;
 import spark.Response;
 import spark.Spark;
 
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.ServletException;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.InputStream;
 
 import static org.bytedeco.opencv.global.opencv_imgcodecs.*;
 import static org.bytedeco.opencv.global.opencv_imgproc.resize;
@@ -35,14 +38,15 @@ public class WebServer {
     private void start() {
         logger.info("Starting Web server");
         Spark.port(5000);
+        Spark.staticFiles.location("/public"); // Static files
         Spark.post("/removehuman", this::inference);
         Spark.awaitInitialization();
         logger.info("Web server started at {}", Spark.port());
     }
 
-    private Object inference(Request request, Response response) {
-        byte[] body = request.bodyAsBytes();
-        logger.info("Received bytes with length {}" , body.length);
+    private Object inference(Request request, Response response) throws IOException {
+        byte[] body = getImageBytes(request);
+        logger.info("Received bytes with length {}", body.length);
         long start = System.currentTimeMillis();
         Mat resizedImageMat = convertToMat(body);
         INDArray input = cvMatToINDArrayResized(resizedImageMat);
@@ -57,6 +61,19 @@ public class WebServer {
         return outputBuffer;
     }
 
+    private byte[] getImageBytes(Request request) throws IOException {
+        request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/temp"));
+        try (InputStream is = request.raw().getPart("file").getInputStream()) {
+            byte[] body = new byte[is.available()];
+            is.read(body);
+            logger.info("Get image data from form data");
+            return body;
+        } catch (ServletException e) {
+            byte[] bytes = request.bodyAsBytes();
+            logger.info("Get image data from body bytes");
+            return bytes;
+        }
+    }
 
     private Mat convertToMat(byte[] body) {
         Mat baseImgMat = imdecode(new Mat(body), IMREAD_COLOR);
@@ -77,16 +94,12 @@ public class WebServer {
         return result;
     }
 
-    private static INDArray cvMatToINDArrayResized(Mat mat) {
+    private static INDArray cvMatToINDArrayResized(Mat mat) throws IOException {
         long start = System.currentTimeMillis();
         NativeImageLoader nativeImageLoader = new NativeImageLoader();
-        try {
-            INDArray indArray = nativeImageLoader.asMatrix(mat).permute(0, 2, 3, 1);
-            logger.info("Took {}ms to finish converting image to nd array", System.currentTimeMillis() - start);
-            return indArray;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        INDArray indArray = nativeImageLoader.asMatrix(mat).permute(0, 2, 3, 1);
+        logger.info("Took {}ms to finish converting image to nd array", System.currentTimeMillis() - start);
+        return indArray;
     }
 
 
