@@ -45,13 +45,7 @@ public class WebServer {
     }
 
     private Object inference(Request request, Response response) throws IOException, ServletException {
-        request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/temp"));
-        byte[] body;
-        try (InputStream is = request.raw().getPart("file").getInputStream()) {
-            body = new byte[is.available()];
-            is.read(body);
-        }
-
+        byte[] body = getImageBytes(request);
         logger.info("Received bytes with length {}", body.length);
         long start = System.currentTimeMillis();
         Mat resizedImageMat = convertToMat(body);
@@ -65,6 +59,20 @@ public class WebServer {
         response.raw().setContentType("image/jpeg");
         logger.info("Took {}ms to finish all steps", System.currentTimeMillis() - start);
         return outputBuffer;
+    }
+
+    private byte[] getImageBytes(Request request) throws IOException {
+        request.attribute("org.eclipse.jetty.multipartConfig", new MultipartConfigElement("/temp"));
+        try (InputStream is = request.raw().getPart("file").getInputStream()) {
+            byte[] body = new byte[is.available()];
+            is.read(body);
+            logger.info("Get image data from form data");
+            return body;
+        } catch (ServletException e) {
+            byte[] bytes = request.bodyAsBytes();
+            logger.info("Get image data from body bytes");
+            return bytes;
+        }
     }
 
     private Mat convertToMat(byte[] body) {
