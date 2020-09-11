@@ -39,7 +39,7 @@ public class WebServer {
         logger.info("Starting Web server");
         Spark.port(5000);
         Spark.staticFiles.location("/public"); // Static files
-        Spark.post("/removehuman", this::inference);
+        Spark.post("/api/removehuman", this::inference);
         Spark.awaitInitialization();
         logger.info("Web server started at {}", Spark.port());
     }
