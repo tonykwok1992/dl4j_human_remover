@@ -44,7 +44,7 @@ public class WebServer {
         logger.info("Web server started at {}", Spark.port());
     }
 
-    private Object inference(Request request, Response response) throws IOException, ServletException {
+    private Object inference(Request request, Response response) throws IOException {
         byte[] body = getImageBytes(request);
         logger.info("Received bytes with length {}", body.length);
         long start = System.currentTimeMillis();
